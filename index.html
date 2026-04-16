@@ -137,6 +137,11 @@ header h1 span{color:var(--t3);font-weight:400}
   padding:4px 12px;background:rgba(11,11,18,.8);border-radius:6px;border:1px solid var(--b1);
   backdrop-filter:blur(4px);white-space:nowrap;user-select:none}
 .help b{color:var(--t2)}
+.toast{position:absolute;bottom:48px;left:50%;transform:translateX(-50%) translateY(12px);z-index:20;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gnh);padding:6px 16px;
+  background:var(--gnl);border:1px solid var(--green);border-radius:6px;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -163,6 +168,11 @@ header h1 span{color:var(--t3);font-weight:400}
     </button>
     <button class="hbtn" id="btn-redo" onclick="redo()" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-5.64-11.36L23 10"/></svg>
+    </button>
+    <div class="sep" id="save-sep" style="display:none"></div>
+    <button class="hbtn primary" id="btn-save" onclick="saveToStorage()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save
     </button>
     <div class="sep" id="cmd-sep" style="display:none"></div>
     <button class="hbtn" onclick="openCmd()" title="⌘K">
@@ -236,6 +246,47 @@ const COLORS = {
   gray: {fill:"#1a1a26", stroke:"#40405a", title:"#9898aa"},
   green: {fill:"#152e08", stroke:"#639922", title:"#97C459"},
 };
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+const STORAGE_KEY = "orgarch_save";
+const DEFAULT_NODES = JSON.parse(JSON.stringify(NODES));
+const DEFAULT_CONNECTIONS = JSON.parse(JSON.stringify(CONNECTIONS));
+
+function saveToStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, v:1}));
+  showToast("Saved");
+}
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (d.nodes && d.connections) {
+      NODES.length = 0; NODES.push(...d.nodes);
+      CONNECTIONS.length = 0; CONNECTIONS.push(...d.connections);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+function resetToDefault() {
+  if (!confirm("Reset to default layout? Your saved changes will be lost.")) return;
+  NODES.length = 0; NODES.push(...JSON.parse(JSON.stringify(DEFAULT_NODES)));
+  CONNECTIONS.length = 0; CONNECTIONS.push(...JSON.parse(JSON.stringify(DEFAULT_CONNECTIONS)));
+  localStorage.removeItem(STORAGE_KEY);
+  selected = null; closePanel(); render();
+  showToast("Reset to default");
+}
+function showToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id="toast"; document.getElementById("canvas-wrap").appendChild(t); }
+  t.textContent = msg;
+  t.className = "toast show";
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.className = "toast", 1800);
+}
 
 // ============================================================
 // STATE
@@ -451,6 +502,8 @@ function toggleEdit() {
   document.getElementById("btn-add-conn").style.display = show;
   document.getElementById("btn-undo").style.display = show;
   document.getElementById("btn-redo").style.display = show;
+  document.getElementById("save-sep").style.display = show;
+  document.getElementById("btn-save").style.display = show;
   document.getElementById("cmd-sep").style.display = show;
   if (!editing) {
     selected = null;
@@ -853,6 +906,8 @@ const COMMANDS = [
   {name:"Duplicate node", key:"⌘D", fn:duplicateNode},
   {name:"Undo", key:"⌘Z", fn:undo},
   {name:"Redo", key:"⌘⇧Z", fn:redo},
+  {name:"Save changes", key:"⌘S", fn:saveToStorage},
+  {name:"Reset to default", key:"", fn:resetToDefault},
 ];
 
 let cmdActive = -1;
@@ -902,6 +957,8 @@ document.addEventListener("keydown", e => {
   if (document.getElementById("cmd-palette").classList.contains("visible")) return;
   if (e.target.closest("input,textarea,select")) return;
 
+  // Cmd+S
+  if ((e.metaKey||e.ctrlKey) && e.key==="s") { e.preventDefault(); saveToStorage(); return; }
   // Cmd+K
   if ((e.metaKey||e.ctrlKey) && e.key==="k") { e.preventDefault(); openCmd(); return; }
   // Cmd+Z
@@ -929,6 +986,7 @@ document.addEventListener("keydown", e => {
 // ============================================================
 // INIT
 // ============================================================
+loadFromStorage();
 render();
 </script>
 </body>
