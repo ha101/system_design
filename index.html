@@ -4,16 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Org Architecture — Factoring Co</title>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime"
-  }
-}
-</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
 :root {
@@ -28,7 +18,6 @@
   --gl:#1a1a26;--gm:#40405a;--gh:#9898aa;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-#excalidraw-container *{all:revert;box-sizing:content-box}
 body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
 .grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
   background-image:linear-gradient(rgba(100,100,140,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(100,100,140,.06) 1px,transparent 1px);background-size:48px 48px}
@@ -67,16 +56,43 @@ header h1 span{color:var(--t3);font-weight:400}
 .ac{stroke-dasharray:6 5;animation:fc 1s linear infinite}
 .help{position:fixed;bottom:8px;left:24px;z-index:10;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t3)}
 .help b{color:var(--t2)}
-#edit-mode{display:none;flex:1;position:relative;z-index:2}
+#edit-mode{display:none;flex:1;position:relative;z-index:2;flex-direction:column}
 #edit-mode.active{display:flex}
 #view-mode.hidden{display:none}
 .help.hidden{display:none}
-#excalidraw-container{flex:1;width:100%;height:100%;position:relative}
-.loading-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--t2);flex-direction:column;gap:8px}
-.loading-msg .spinner{width:24px;height:24px;border:2px solid var(--b2);border-top-color:var(--green);
-  border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+#edit-canvas{flex:1;width:100%;cursor:default}
+#edit-canvas svg{width:100%;height:100%}
+#edit-canvas svg text{font-family:'IBM Plex Mono',monospace}
+.edit-toolbar{display:flex;gap:3px;padding:6px 12px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);align-items:center;flex-shrink:0}
+.edit-toolbar button{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;
+  border:1px solid var(--b1);background:0;color:var(--t2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px}
+.edit-toolbar button:hover{border-color:var(--b2);color:var(--t1)}
+.edit-toolbar button.active{border-color:var(--green);color:var(--gnh);background:var(--gnl)}
+.edit-toolbar button.danger{border-color:var(--coral);color:var(--ch)}
+.edit-toolbar button.danger:hover{background:var(--cl)}
+.edit-toolbar button.primary{border-color:var(--green);color:var(--gnh)}
+.edit-toolbar button.primary:hover{background:var(--green);color:#fff}
+.edit-toolbar .sep{width:1px;height:20px;background:var(--b1);margin:0 4px}
+.node-selected rect:first-child{stroke-width:2!important;filter:drop-shadow(0 0 6px rgba(99,153,34,.4))}
+.conn-selected{stroke-width:3!important;filter:drop-shadow(0 0 4px rgba(99,153,34,.5))}
+.edit-node-group{cursor:grab}
+.edit-node-group:active{cursor:grabbing}
+#node-form,#conn-form{position:absolute;z-index:20;background:var(--s1);border:1px solid var(--b2);border-radius:8px;
+  padding:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--t1);min-width:300px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
+#node-form.visible,#conn-form.visible{display:block}
+#node-form label,#conn-form label{display:block;color:var(--t3);font-size:9px;letter-spacing:.08em;margin:8px 0 3px;text-transform:uppercase}
+#node-form label:first-child,#conn-form label:first-child{margin-top:0}
+#node-form input,#node-form textarea,#node-form select,
+#conn-form input,#conn-form select{width:100%;padding:4px 8px;border-radius:4px;border:1px solid var(--b1);
+  background:var(--s2);color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none}
+#node-form input:focus,#node-form textarea:focus,#node-form select:focus,
+#conn-form input:focus,#conn-form select:focus{border-color:var(--green)}
+#node-form textarea{resize:vertical;min-height:40px}
+.form-actions{display:flex;gap:6px;margin-top:10px;justify-content:flex-end}
+.form-actions button{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--b1);background:0;color:var(--t2)}
+.form-actions button.save{border-color:var(--green);color:var(--gnh)}
+.form-actions button.save:hover{background:var(--green);color:#fff}
 </style>
 </head>
 <body>
@@ -104,11 +120,22 @@ header h1 span{color:var(--t3);font-weight:400}
 
 
 <div id="edit-mode">
-  <div class="loading-msg" id="loading-msg">
-    <div class="spinner"></div>
-    Loading Excalidraw editor...
+  <div class="edit-toolbar">
+    <button onclick="addNode()" class="primary">+ Node</button>
+    <button onclick="startAddConn()" id="add-conn-btn">+ Connection</button>
+    <div class="sep"></div>
+    <button onclick="deleteSelected()" class="danger" id="del-btn">Delete</button>
+    <div class="sep"></div>
+    <button class="tog" id="et-deal" onclick="etog('deal')"><span class="d" style="background:var(--teal)"></span>Deal</button>
+    <button class="tog" id="et-esc" onclick="etog('esc')"><span class="d" style="background:var(--coral)"></span>Esc</button>
+    <button class="tog" id="et-data" onclick="etog('data')"><span class="d" style="background:var(--purple)"></span>Data</button>
+    <button class="tog" id="et-cash" onclick="etog('cash')"><span class="d" style="background:var(--green)"></span>Cash</button>
+    <div style="flex:1"></div>
+    <button onclick="exitEdit()" class="primary">Done</button>
   </div>
-  <div id="excalidraw-container"></div>
+  <div id="edit-canvas"></div>
+  <div id="node-form"></div>
+  <div id="conn-form"></div>
 </div>
 
 <div class="help" id="help-bar"><b>1</b> deal &nbsp; <b>2</b> escalation &nbsp; <b>3</b> data &nbsp; <b>4</b> cashflow &nbsp; <b>A</b> all &nbsp; <b>0</b> nodes only &nbsp; <b>E</b> edit</div>
@@ -310,204 +337,392 @@ function sync() {
 function tog(k) { st[k] = !st[k]; sync(); }
 
 // ============================================================
-// EXCALIDRAW INTEGRATION
+// NATIVE SVG EDITOR
 // ============================================================
-let excalidrawAPI = null;
 let editActive = false;
+let selectedNode = null;
+let selectedConn = null;
+let addingConn = false;
+let connFromNode = null;
+const est = {deal:true, esc:true, data:true, cash:true};
 
-function nodesToExcalidraw() {
-  let elems = [];
-  let idCounter = 0;
-  const eid = () => "elem_" + (idCounter++);
-
-  const colorMap = {
-    coral: {bg:"#2c1810", stroke:"#D85A30", text:"#F0997B"},
-    teal: {bg:"#0d2e24", stroke:"#1D9E75", text:"#5DCAA5"},
-    purple: {bg:"#1e1840", stroke:"#7F77DD", text:"#AFA9EC"},
-    gray: {bg:"#1a1a26", stroke:"#40405a", text:"#9898aa"},
-    green: {bg:"#152e08", stroke:"#639922", text:"#97C459"},
-  };
-
-  // Scale up for Excalidraw (it uses larger coords)
-  const S = 1.5;
-
-  NODES.forEach(n => {
-    const c = colorMap[n.type];
-    const rectId = eid();
-    const textId = eid();
-    const fullText = n.label + (n.badge ? ` [${n.badge}]` : "") + "\n" + (n.sub||"") + (n.auth ? "\n— " + n.auth : "") + (n.io ? "\n" + n.io : "");
-
-    elems.push({
-      id: rectId, type: "rectangle",
-      x: n.x*S, y: n.y*S, width: n.w*S, height: n.h*S,
-      angle: 0, strokeColor: c.stroke, backgroundColor: c.bg,
-      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: 100,
-      roundness: {type: 3}, isDeleted: false,
-      boundElements: [{id: textId, type: "text"}],
-      locked: false, groupIds: [],
-      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
-      updated: Date.now(), link: null,
-    });
-
-    elems.push({
-      id: textId, type: "text",
-      x: n.x*S + 10, y: n.y*S + 10,
-      width: n.w*S - 20, height: n.h*S - 20,
-      angle: 0, strokeColor: c.text, backgroundColor: "transparent",
-      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: 100,
-      roundness: null, isDeleted: false, boundElements: [],
-      locked: false, groupIds: [],
-      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
-      updated: Date.now(), link: null,
-      text: fullText, fontSize: 14, fontFamily: 3,
-      textAlign: "left", verticalAlign: "top",
-      containerId: rectId, originalText: fullText, autoResize: true, lineHeight: 1.2,
-    });
-  });
-
-  // Connections as arrows
-  CONNECTIONS.forEach(cn => {
-    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
-    const c = colorMap[cn.color] || {stroke:"#888"};
-    elems.push({
-      id: eid(), type: "arrow",
-      x: fx*S, y: fy*S, width: (tx-fx)*S, height: (ty-fy)*S,
-      angle: 0, strokeColor: c.stroke, backgroundColor: "transparent",
-      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: cn.opacity ? cn.opacity*100 : 100,
-      roundness: {type: 2}, isDeleted: false, boundElements: [],
-      locked: false, groupIds: [],
-      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
-      updated: Date.now(), link: null,
-      points: [[0,0],[(tx-fx)*S,(ty-fy)*S]],
-      startBinding: null, endBinding: null,
-      startArrowhead: null, endArrowhead: "arrow", lastCommittedPoint: null,
-    });
-  });
-
-  return elems;
-}
-
-async function enterEdit() {
+function enterEdit() {
   if (editActive) return;
   editActive = true;
-  const btn = document.getElementById("edit-btn");
-  btn.classList.add("loading");
-  btn.textContent = "Loading...";
+  closeForms();
+  selectedNode = null;
+  selectedConn = null;
   document.getElementById("view-mode").classList.add("hidden");
   document.getElementById("help-bar").classList.add("hidden");
   document.getElementById("toggles").style.display = "none";
   document.getElementById("edit-mode").classList.add("active");
+  // sync editor layer toggles
+  for (const k in est) {
+    const b = document.getElementById("et-"+k);
+    if (b) b.classList.toggle("on", est[k]);
+  }
+  renderEditSVG();
+}
 
-  try {
-    // Dynamic import from CDN — let esm.sh bundle React internally
-    const React = await import("https://esm.sh/react@18.3.1");
-    const ReactDOM = await import("https://esm.sh/react-dom@18.3.1/client");
-    const ExcalidrawModule = await import("https://esm.sh/@excalidraw/excalidraw@0.18.0?deps=react@18.3.1,react-dom@18.3.1");
-    const Excalidraw = ExcalidrawModule.Excalidraw;
+function exitEdit() {
+  editActive = false;
+  addingConn = false;
+  connFromNode = null;
+  closeForms();
+  document.getElementById("edit-mode").classList.remove("active");
+  document.getElementById("view-mode").classList.remove("hidden");
+  document.getElementById("help-bar").classList.remove("hidden");
+  document.getElementById("toggles").style.display = "flex";
+  renderSVG();
+  sync();
+}
 
-    document.getElementById("loading-msg").style.display = "none";
+function etog(k) {
+  est[k] = !est[k];
+  const b = document.getElementById("et-"+k);
+  if (b) b.classList.toggle("on", est[k]);
+  renderEditSVG();
+}
 
-    const container = document.getElementById("excalidraw-container");
-    const root = ReactDOM.createRoot(container);
+function closeForms() {
+  document.getElementById("node-form").classList.remove("visible");
+  document.getElementById("conn-form").classList.remove("visible");
+}
 
-    const initialData = {
-      elements: nodesToExcalidraw(),
-      appState: {
-        viewBackgroundColor: "#0b0b12",
-        theme: "dark",
-        gridSize: 20,
-      },
-    };
+function renderEditSVG() {
+  const canvas = document.getElementById("edit-canvas");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 1280 760");
 
-    // Build the back button
-    const backBtn = React.createElement("button", {
-      onClick: () => exitEdit(root),
-      style: {
-        position:"absolute", top:"12px", right:"12px", zIndex:1000,
-        fontFamily:"'IBM Plex Mono', monospace", fontSize:"12px",
-        padding:"6px 14px", borderRadius:"6px",
-        border:"1px solid #639922", background:"#152e08", color:"#97C459",
-        cursor:"pointer", display:"flex", alignItems:"center", gap:"6px",
+  // Defs (same markers)
+  svg.innerHTML = `<defs>
+    <marker id="eat" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="eacl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--coral)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="eap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="eagn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>`;
+
+  // Grid
+  svg.innerHTML += `<rect width="1280" height="760" fill="var(--bg)"/>`;
+
+  // Row labels
+  svg.innerHTML += `<text x="30" y="28" fill="var(--t3)" font-size="9" letter-spacing=".1em">HUMANS</text>`;
+  svg.innerHTML += `<text x="30" y="244" fill="var(--t3)" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
+  svg.innerHTML += `<text x="30" y="552" fill="var(--t3)" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
+
+  // Connections (rendered behind nodes)
+  const emarkerMap = {teal:"eat",coral:"eacl",purple:"eap",green:"eagn"};
+  CONNECTIONS.forEach((cn, ci) => {
+    const layerMap = {deal:"deal",esc:"esc",data:"data",cash:"cash"};
+    if (!est[cn.layer]) return;
+    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
+    const marker = emarkerMap[cn.color];
+    const op = cn.opacity || 1;
+    const isSel = selectedConn === ci;
+    const sw = isSel ? 3 : (cn.style==="animated-up" ? 0.8 : cn.style==="dashed" ? 0.8 : 1.5);
+    let dash = "";
+    if (cn.style === "dashed") dash = 'stroke-dasharray="4 4"';
+    let g = `<g data-conn="${ci}" class="edit-conn" style="cursor:pointer">`;
+    // Wider invisible hit area
+    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="transparent" stroke-width="12"/>`;
+    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="var(--${cn.color})" stroke-width="${sw}" ${dash} opacity="${op}" marker-end="url(#${marker})" ${isSel?'class="conn-selected"':''}/>`;
+    if (cn.label) {
+      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
+      g += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="var(--s2)" stroke="${isSel?'var(--green)':'var(--b1)'}" stroke-width="${isSel?1.5:0.5}"/>`;
+      g += `<text x="${mx}" y="${my+2}" fill="var(--ah)" font-size="8" text-anchor="middle">${cn.label}</text>`;
+    }
+    g += `</g>`;
+    svg.innerHTML += g;
+  });
+
+  // Nodes
+  NODES.forEach((n, ni) => {
+    const c = COLORS[n.type];
+    const isSel = selectedNode === ni;
+    let g = `<g data-node="${ni}" class="edit-node-group ${isSel?'node-selected':''}">`;
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${isSel?'var(--green)':c.stroke}" stroke-width="${isSel?2:0.5}"/>`;
+    g += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${n.label}</text>`;
+    if (n.badge) g += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="var(--t3)" font-size="9">${n.badge}</text>`;
+    const lines = (n.sub||"").split("\n");
+    lines.forEach((l,i) => { g += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="var(--t3)" font-size="10">${l}</text>`; });
+    if (n.auth) g += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${n.auth}</text>`;
+    if (n.io) g += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${n.io}</text>`;
+    g += `</g>`;
+    svg.innerHTML += g;
+  });
+
+  canvas.innerHTML = "";
+  canvas.appendChild(svg);
+
+  // Attach event handlers
+  setupEditEvents(svg);
+}
+
+function svgPoint(svg, e) {
+  const pt = svg.createSVGPoint();
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  pt.x = (e.clientX - rect.left) / rect.width * vb.width;
+  pt.y = (e.clientY - rect.top) / rect.height * vb.height;
+  return pt;
+}
+
+function setupEditEvents(svg) {
+  let dragging = false;
+  let dragNode = null;
+  let dragStart = null;
+  let origPos = null;
+
+  svg.addEventListener("mousedown", e => {
+    const nodeG = e.target.closest("[data-node]");
+    const connG = e.target.closest("[data-conn]");
+
+    if (addingConn && nodeG) {
+      const ni = parseInt(nodeG.dataset.node);
+      if (connFromNode === null) {
+        connFromNode = ni;
+        nodeG.classList.add("node-selected");
+      } else {
+        if (connFromNode !== ni) {
+          CONNECTIONS.push({
+            from: NODES[connFromNode].id,
+            to: NODES[ni].id,
+            layer: "deal", color: "teal", style: "animated"
+          });
+          selectedConn = CONNECTIONS.length - 1;
+          selectedNode = null;
+          showConnForm(selectedConn);
+        }
+        addingConn = false;
+        connFromNode = null;
+        document.getElementById("add-conn-btn").classList.remove("active");
+        renderEditSVG();
       }
-    }, "← Back to overlay view");
+      return;
+    }
 
-    const app = React.createElement("div", {style:{width:"100%",height:"100%",position:"relative"}},
-      React.createElement(Excalidraw, {
-        initialData,
-        theme: "dark",
-        ref: (api) => { excalidrawAPI = api; },
-      }),
-      backBtn,
-    );
+    if (nodeG) {
+      const ni = parseInt(nodeG.dataset.node);
+      selectedNode = ni;
+      selectedConn = null;
+      closeForms();
+      dragging = true;
+      dragNode = ni;
+      dragStart = svgPoint(svg, e);
+      origPos = {x: NODES[ni].x, y: NODES[ni].y};
+      renderEditSVG();
+      e.preventDefault();
+    } else if (connG) {
+      const ci = parseInt(connG.dataset.conn);
+      selectedConn = ci;
+      selectedNode = null;
+      closeForms();
+      renderEditSVG();
+      e.preventDefault();
+    } else {
+      selectedNode = null;
+      selectedConn = null;
+      closeForms();
+      renderEditSVG();
+    }
+  });
 
-    root.render(app);
-  } catch (err) {
-    console.error("Failed to load Excalidraw:", err);
-    document.getElementById("loading-msg").innerHTML = `
-      <div style="color:var(--coral);font-weight:500">Failed to load Excalidraw from CDN</div>
-      <div style="font-size:11px;max-width:400px;text-align:center;line-height:1.6">
-        ${err.message}<br><br>
-        As a fallback, you can download the .excalidraw file and open it at
-        <a href="https://excalidraw.com" target="_blank" style="color:var(--teal)">excalidraw.com</a>
-      </div>
-      <button onclick="downloadExcalidraw()" style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid var(--green);background:var(--gnl);color:var(--gnh);cursor:pointer">
-        Download .excalidraw file
-      </button>
-      <button onclick="exitEditSimple()" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 14px;border-radius:6px;border:1px solid var(--b1);background:0;color:var(--t2);cursor:pointer">
-        ← Back to overlay view
-      </button>
-    `;
+  svg.addEventListener("mousemove", e => {
+    if (!dragging || dragNode === null) return;
+    const pt = svgPoint(svg, e);
+    NODES[dragNode].x = Math.round(origPos.x + pt.x - dragStart.x);
+    NODES[dragNode].y = Math.round(origPos.y + pt.y - dragStart.y);
+    renderEditSVG();
+  });
+
+  svg.addEventListener("mouseup", () => {
+    dragging = false;
+    dragNode = null;
+  });
+
+  svg.addEventListener("mouseleave", () => {
+    dragging = false;
+    dragNode = null;
+  });
+
+  svg.addEventListener("dblclick", e => {
+    const nodeG = e.target.closest("[data-node]");
+    const connG = e.target.closest("[data-conn]");
+    if (nodeG) {
+      const ni = parseInt(nodeG.dataset.node);
+      selectedNode = ni;
+      selectedConn = null;
+      renderEditSVG();
+      showNodeForm(ni);
+    } else if (connG) {
+      const ci = parseInt(connG.dataset.conn);
+      selectedConn = ci;
+      selectedNode = null;
+      renderEditSVG();
+      showConnForm(ci);
+    }
+  });
+}
+
+function showNodeForm(ni) {
+  const n = NODES[ni];
+  const form = document.getElementById("node-form");
+  form.innerHTML = `
+    <label>Label</label>
+    <input id="nf-label" value="${esc(n.label)}">
+    <label>Badge</label>
+    <input id="nf-badge" value="${esc(n.badge||'')}" placeholder="e.g. LLM, RULES">
+    <label>Description (\\n for newlines)</label>
+    <textarea id="nf-sub">${esc(n.sub||'')}</textarea>
+    <label>Authority / IO</label>
+    <input id="nf-extra" value="${esc(n.auth||n.io||'')}">
+    <label>Type</label>
+    <select id="nf-type">
+      <option value="coral" ${n.type==='coral'?'selected':''}>Coral (Human)</option>
+      <option value="teal" ${n.type==='teal'?'selected':''}>Teal (Engine)</option>
+      <option value="purple" ${n.type==='purple'?'selected':''}>Purple (Agent)</option>
+      <option value="gray" ${n.type==='gray'?'selected':''}>Gray (Infra)</option>
+      <option value="green" ${n.type==='green'?'selected':''}>Green (External)</option>
+    </select>
+    <label>Size (W x H)</label>
+    <div style="display:flex;gap:6px">
+      <input id="nf-w" type="number" value="${n.w}" style="width:50%">
+      <input id="nf-h" type="number" value="${n.h}" style="width:50%">
+    </div>
+    <div class="form-actions">
+      <button onclick="closeForms()">Cancel</button>
+      <button class="save" onclick="saveNode(${ni})">Save</button>
+    </div>`;
+  form.style.left = "50%";
+  form.style.top = "50%";
+  form.style.transform = "translate(-50%,-50%)";
+  form.classList.add("visible");
+}
+
+function saveNode(ni) {
+  const n = NODES[ni];
+  n.label = document.getElementById("nf-label").value;
+  n.badge = document.getElementById("nf-badge").value || undefined;
+  n.sub = document.getElementById("nf-sub").value;
+  const extra = document.getElementById("nf-extra").value;
+  const oldType = n.type;
+  n.type = document.getElementById("nf-type").value;
+  n.w = parseInt(document.getElementById("nf-w").value) || n.w;
+  n.h = parseInt(document.getElementById("nf-h").value) || n.h;
+  // Assign to auth or io based on type
+  if (n.type === "coral") { n.auth = extra; delete n.io; }
+  else if (n.type === "teal" || n.type === "purple") { n.io = extra; delete n.auth; }
+  else { delete n.auth; delete n.io; }
+  closeForms();
+  renderEditSVG();
+}
+
+function showConnForm(ci) {
+  const cn = CONNECTIONS[ci];
+  const form = document.getElementById("conn-form");
+  const nodeOpts = NODES.map((n,i) => `<option value="${n.id}" ${n.id===cn.from?'selected':''}>${n.label}</option>`).join("");
+  const nodeOpts2 = NODES.map((n,i) => `<option value="${n.id}" ${n.id===cn.to?'selected':''}>${n.label}</option>`).join("");
+  form.innerHTML = `
+    <label>From</label>
+    <select id="cf-from">${nodeOpts}</select>
+    <label>To</label>
+    <select id="cf-to">${nodeOpts2}</select>
+    <label>Layer</label>
+    <select id="cf-layer">
+      <option value="deal" ${cn.layer==='deal'?'selected':''}>Deal flow</option>
+      <option value="esc" ${cn.layer==='esc'?'selected':''}>Escalation</option>
+      <option value="data" ${cn.layer==='data'?'selected':''}>Data flow</option>
+      <option value="cash" ${cn.layer==='cash'?'selected':''}>Cashflow</option>
+    </select>
+    <label>Color</label>
+    <select id="cf-color">
+      <option value="teal" ${cn.color==='teal'?'selected':''}>Teal</option>
+      <option value="coral" ${cn.color==='coral'?'selected':''}>Coral</option>
+      <option value="purple" ${cn.color==='purple'?'selected':''}>Purple</option>
+      <option value="green" ${cn.color==='green'?'selected':''}>Green</option>
+    </select>
+    <label>Style</label>
+    <select id="cf-style">
+      <option value="animated" ${cn.style==='animated'?'selected':''}>Animated</option>
+      <option value="animated-up" ${cn.style==='animated-up'?'selected':''}>Animated (up)</option>
+      <option value="dashed" ${cn.style==='dashed'?'selected':''}>Dashed</option>
+    </select>
+    <label>Label</label>
+    <input id="cf-label" value="${esc(cn.label||'')}">
+    <div class="form-actions">
+      <button onclick="closeForms()">Cancel</button>
+      <button class="save" onclick="saveConn(${ci})">Save</button>
+    </div>`;
+  form.style.left = "50%";
+  form.style.top = "50%";
+  form.style.transform = "translate(-50%,-50%)";
+  form.classList.add("visible");
+}
+
+function saveConn(ci) {
+  const cn = CONNECTIONS[ci];
+  cn.from = document.getElementById("cf-from").value;
+  cn.to = document.getElementById("cf-to").value;
+  cn.layer = document.getElementById("cf-layer").value;
+  cn.color = document.getElementById("cf-color").value;
+  cn.style = document.getElementById("cf-style").value;
+  cn.label = document.getElementById("cf-label").value || undefined;
+  closeForms();
+  renderEditSVG();
+}
+
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+function addNode() {
+  const id = "node_" + Date.now();
+  NODES.push({id, label:"New Node", sub:"Description", type:"gray", x:500, y:400, w:200, h:60});
+  selectedNode = NODES.length - 1;
+  selectedConn = null;
+  renderEditSVG();
+  showNodeForm(selectedNode);
+}
+
+function startAddConn() {
+  addingConn = !addingConn;
+  connFromNode = null;
+  document.getElementById("add-conn-btn").classList.toggle("active", addingConn);
+  if (addingConn) {
+    selectedNode = null;
+    selectedConn = null;
+    closeForms();
   }
 }
 
-function exitEdit(root) {
-  if (root) {
-    try { root.unmount(); } catch(e) {}
+function deleteSelected() {
+  if (selectedNode !== null) {
+    const nodeId = NODES[selectedNode].id;
+    NODES.splice(selectedNode, 1);
+    // Remove connections referencing this node
+    for (let i = CONNECTIONS.length - 1; i >= 0; i--) {
+      if (CONNECTIONS[i].from === nodeId || CONNECTIONS[i].to === nodeId) {
+        CONNECTIONS.splice(i, 1);
+      }
+    }
+    selectedNode = null;
+    closeForms();
+    renderEditSVG();
+  } else if (selectedConn !== null) {
+    CONNECTIONS.splice(selectedConn, 1);
+    selectedConn = null;
+    closeForms();
+    renderEditSVG();
   }
-  editActive = false;
-  document.getElementById("edit-mode").classList.remove("active");
-  document.getElementById("view-mode").classList.remove("hidden");
-  document.getElementById("help-bar").classList.remove("hidden");
-  document.getElementById("toggles").style.display = "flex";
-  document.getElementById("loading-msg").style.display = "flex";
-  const btn = document.getElementById("edit-btn");
-  btn.classList.remove("loading");
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit layout`;
-}
-
-function exitEditSimple() {
-  editActive = false;
-  document.getElementById("edit-mode").classList.remove("active");
-  document.getElementById("view-mode").classList.remove("hidden");
-  document.getElementById("help-bar").classList.remove("hidden");
-  document.getElementById("toggles").style.display = "flex";
-  document.getElementById("loading-msg").style.display = "flex";
-  document.getElementById("loading-msg").innerHTML = `<div class="spinner"></div>Loading Excalidraw editor...`;
-  const btn = document.getElementById("edit-btn");
-  btn.classList.remove("loading");
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit layout`;
-}
-
-function downloadExcalidraw() {
-  const scene = {
-    type: "excalidraw", version: 2,
-    source: "https://excalidraw.com",
-    elements: nodesToExcalidraw(),
-    appState: {viewBackgroundColor:"#0b0b12", gridSize:20},
-    files: {}
-  };
-  const blob = new Blob([JSON.stringify(scene, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "org-architecture.excalidraw"; a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ============================================================
 // KEYBOARD SHORTCUTS
 // ============================================================
 document.addEventListener("keydown", e => {
-  if (editActive) return;
+  if (editActive) {
+    if (e.key === "Escape") { closeForms(); addingConn=false; connFromNode=null; document.getElementById("add-conn-btn").classList.remove("active"); }
+    if ((e.key === "Delete" || e.key === "Backspace") && !e.target.closest("input,textarea,select")) deleteSelected();
+    return;
+  }
   if (e.key==="1"){st.deal=!st.deal;sync()}
   if (e.key==="2"){st.esc=!st.esc;sync()}
   if (e.key==="3"){st.data=!st.data;sync()}
