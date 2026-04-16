@@ -20,7 +20,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
 .grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
-  background-image:linear-gradient(rgba(100,100,140,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(100,100,140,.06) 1px,transparent 1px);background-size:48px 48px}
+  background-image:linear-gradient(rgba(100,100,140,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(100,100,140,.06) 1px,transparent 1px);background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,black 40%,transparent 100%)}
 
 /* Header */
 header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
@@ -68,12 +69,14 @@ header h1 span{color:var(--t3);font-weight:400}
 .au{stroke-dasharray:5 4;animation:fu 1.6s linear infinite}
 
 /* Node hover/selection */
-.node-g{transition:filter .15s}
-#canvas-wrap.editing .node-g:hover rect:first-child{stroke-width:1.2;filter:brightness(1.15)}
-.node-g.selected rect:first-child{stroke:var(--green)!important;stroke-width:2!important}
+.node-g{transition:filter .2s,transform .2s}
+#canvas-wrap.editing .node-g:hover{filter:brightness(1.08) drop-shadow(0 2px 8px rgba(0,0,0,.3))}
+.node-g.selected rect.node-bg{stroke:var(--green)!important;stroke-width:1.5!important}
 @keyframes march{to{stroke-dashoffset:-12}}
-.node-g.selected .sel-border{stroke-dasharray:4 2;animation:march .4s linear infinite;opacity:1}
-.conn-g.selected line:nth-child(2){stroke-width:3!important}
+.node-g.selected .sel-border{stroke-dasharray:4 2;animation:march .4s linear infinite;opacity:.6}
+.conn-g{transition:filter .15s}
+.conn-g:hover{filter:brightness(1.3)}
+.conn-g.selected line:nth-child(2){stroke-width:3!important;filter:drop-shadow(0 0 4px rgba(99,153,34,.4))}
 
 /* Side panel */
 #panel{position:absolute;right:0;top:0;bottom:0;width:280px;background:var(--s1);border-left:1px solid var(--b1);
@@ -533,6 +536,22 @@ function connPts(fromId, toId) {
   else { fx=f.right; fy=f.y; tx=t.left; ty=t.y; }
   return {fx,fy,tx,ty};
 }
+function connPath(fx,fy,tx,ty) {
+  // Smooth bezier curve between two points
+  const dx = tx-fx, dy = ty-fy;
+  const isVert = Math.abs(dy) > Math.abs(dx)*0.5;
+  let c1x,c1y,c2x,c2y;
+  if (isVert) {
+    const tension = Math.min(Math.abs(dy)*0.4, 60);
+    c1x = fx; c1y = fy + (dy>0?tension:-tension);
+    c2x = tx; c2y = ty - (dy>0?tension:-tension);
+  } else {
+    const tension = Math.min(Math.abs(dx)*0.35, 50);
+    c1x = fx + (dx>0?tension:-tension); c1y = fy;
+    c2x = tx - (dx>0?tension:-tension); c2y = ty;
+  }
+  return `M${fx},${fy} C${c1x},${c1y} ${c2x},${c2y} ${tx},${ty}`;
+}
 function svgPt(e) {
   const svg = document.getElementById("canvas");
   const r = svg.getBoundingClientRect();
@@ -583,44 +602,47 @@ function render() {
     let cls = cn.style==="animated"?"ar":cn.style==="animated-up"?"au":"";
     let sw = cn.style==="animated-up"?0.8:cn.style==="dashed"?0.8:1.5;
     let dash = cn.style==="dashed"?'stroke-dasharray="4 4"':"";
+    const path = connPath(fx,fy,tx,ty);
     let g = `<g data-conn="${ci}" class="conn-g${isSel?' selected':''}" style="cursor:pointer">`;
-    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="transparent" stroke-width="14"/>`;
-    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="${c.stroke}" stroke-width="${isSel?3:sw}" class="${cls}" ${dash} opacity="${op}" marker-end="url(#m-${cn.color})"/>`;
+    g += `<path d="${path}" fill="none" stroke="transparent" stroke-width="14"/>`;
+    g += `<path d="${path}" fill="none" stroke="${c.stroke}" stroke-width="${isSel?3:sw}" class="${cls}" ${dash} opacity="${op}" marker-end="url(#m-${cn.color})" stroke-linecap="round"/>`;
     if (cn.label) {
       const mx=fx+(tx-fx)/2, my=fy+(ty-fy)/2;
-      g += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="#1c1c28" stroke="${isSel?'#639922':'#24243a'}" stroke-width="${isSel?1.5:.5}"/>`;
-      g += `<text x="${mx}" y="${my+2}" fill="#FAC775" font-size="8" text-anchor="middle">${cn.label}</text>`;
+      const lw = cn.label.length*5.8+16;
+      g += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" rx="9" fill="#13131c" stroke="${isSel?'#639922':'rgba(36,36,58,.8)'}" stroke-width="${isSel?1.5:.5}"/>`;
+      g += `<text x="${mx}" y="${my+3}" fill="#FAC775" font-size="8" text-anchor="middle" font-weight="500">${cn.label}</text>`;
     }
     g += `</g>`;
     layerHTML[cn.layer] += g;
   });
 
   // Deal states (static decoration in deal layer)
-  let dealExtra = `<text x="30" y="378" fill="#1D9E75" font-size="9" letter-spacing=".06em" opacity=".5">DEAL STATES</text>`;
+  let dealExtra = `<text x="30" y="380" fill="#1D9E75" font-size="8" letter-spacing=".08em" opacity=".4">DEAL LIFECYCLE</text>`;
   DEAL_STATES.forEach((s,i) => {
-    const w = s.label.length*7+16;
-    dealExtra += `<rect x="${s.x}" y="390" width="${w}" height="20" rx="10" fill="#0e3028" stroke="#1D9E75" stroke-width=".5"/>`;
-    dealExtra += `<text x="${s.x+w/2}" y="404" fill="#5DCAA5" font-size="9" text-anchor="middle" font-weight="500">${s.label}</text>`;
+    const w = s.label.length*6.2+16;
+    dealExtra += `<rect x="${s.x}" y="392" width="${w}" height="18" rx="9" fill="#0e3028" stroke="#1D9E75" stroke-width=".4"/>`;
+    dealExtra += `<text x="${s.x+w/2}" y="404" fill="#5DCAA5" font-size="8" text-anchor="middle" font-weight="500">${s.label}</text>`;
     if (i<DEAL_STATES.length-1) {
       const nx = DEAL_STATES[i+1].x;
-      dealExtra += `<line x1="${s.x+w}" y1="400" x2="${nx}" y2="400" stroke="#1D9E75" stroke-width=".4" opacity=".35" marker-end="url(#m-teal)"/>`;
+      const mid = s.x+w + (nx-s.x-w)/2;
+      dealExtra += `<path d="M${s.x+w+2},401 C${mid},401 ${mid},401 ${nx-2},401" fill="none" stroke="#1D9E75" stroke-width=".4" opacity=".3" marker-end="url(#m-teal)"/>`;
     }
   });
-  dealExtra += `<rect x="200" y="434" width="104" height="20" rx="10" fill="#2c1810" stroke="#D85A30" stroke-width=".5"/>`;
-  dealExtra += `<text x="252" y="448" fill="#F0997B" font-size="8" text-anchor="middle" font-weight="500">Human review</text>`;
-  dealExtra += `<rect x="540" y="434" width="44" height="20" rx="10" fill="#1c1c28" stroke="#BA7517" stroke-width=".5"/>`;
-  dealExtra += `<text x="562" y="448" fill="#FAC775" font-size="8" text-anchor="middle" font-weight="500">Late</text>`;
-  dealExtra += `<rect x="614" y="434" width="66" height="20" rx="10" fill="#2c1810" stroke="#D85A30" stroke-width=".5"/>`;
-  dealExtra += `<text x="647" y="448" fill="#F0997B" font-size="8" text-anchor="middle" font-weight="500">Workout</text>`;
-  dealExtra += `<line x1="584" y1="444" x2="612" y2="444" stroke="#D85A30" stroke-width=".3" opacity=".4" marker-end="url(#m-coral)"/>`;
+  dealExtra += `<rect x="200" y="428" width="104" height="18" rx="9" fill="#2c1810" stroke="#D85A30" stroke-width=".4"/>`;
+  dealExtra += `<text x="252" y="440" fill="#F0997B" font-size="7.5" text-anchor="middle" font-weight="500">Human review</text>`;
+  dealExtra += `<rect x="540" y="428" width="44" height="18" rx="9" fill="#1c1c28" stroke="#BA7517" stroke-width=".4"/>`;
+  dealExtra += `<text x="562" y="440" fill="#FAC775" font-size="7.5" text-anchor="middle" font-weight="500">Late</text>`;
+  dealExtra += `<rect x="614" y="428" width="66" height="18" rx="9" fill="#2c1810" stroke="#D85A30" stroke-width=".4"/>`;
+  dealExtra += `<text x="647" y="440" fill="#F0997B" font-size="7.5" text-anchor="middle" font-weight="500">Workout</text>`;
+  dealExtra += `<path d="M584,437 C598,437 598,437 612,437" fill="none" stroke="#D85A30" stroke-width=".3" opacity=".4" marker-end="url(#m-coral)"/>`;
   layerHTML.deal += dealExtra;
 
-  layerHTML.esc += `<rect x="840" y="148" width="236" height="30" rx="6" fill="#13131c" stroke="#D85A30" stroke-width=".5" opacity=".6"/>`;
-  layerHTML.esc += `<text x="858" y="162" fill="#F0997B" font-size="9" font-weight="500">Principle</text>`;
-  layerHTML.esc += `<text x="858" y="174" fill="#50506e" font-size="8">No human monitors. Agents detect, package, route.</text>`;
+  layerHTML.esc += `<rect x="840" y="148" width="236" height="30" rx="8" fill="#13131c" stroke="#D85A30" stroke-width=".4" opacity=".5"/>`;
+  layerHTML.esc += `<text x="856" y="161" fill="#F0997B" font-size="8.5" font-weight="500">Principle</text>`;
+  layerHTML.esc += `<text x="856" y="173" fill="#6e6e88" font-size="7.5">No human monitors. Agents detect, package, route.</text>`;
 
-  layerHTML.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="#13131c" stroke="#639922" stroke-width=".5" opacity=".5"/>`;
-  layerHTML.cash += `<text x="700" y="752" fill="#97C459" font-size="8" text-anchor="middle">$ Factor discount = revenue</text>`;
+  layerHTML.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="#13131c" stroke="#639922" stroke-width=".4" opacity=".4"/>`;
+  layerHTML.cash += `<text x="700" y="751" fill="#97C459" font-size="7.5" text-anchor="middle">$ Factor discount = revenue</text>`;
 
   // Nodes
   let nodesHTML = "";
@@ -629,14 +651,33 @@ function render() {
     const isSel = selected && selected.type==='node' && selected.index===ni;
     let g = `<g data-node="${ni}" class="node-g${isSel?' selected':''}">`;
     if (isSel) {
-      g += `<rect class="sel-border" x="${n.x-1}" y="${n.y-1}" width="${n.w+2}" height="${n.h+2}" rx="7" fill="none" stroke="#639922" stroke-width="1.5"/>`;
+      g += `<rect class="sel-border" x="${n.x-2}" y="${n.y-2}" width="${n.w+4}" height="${n.h+4}" rx="8" fill="none" stroke="#639922" stroke-width="1"/>`;
     }
-    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${isSel?'#639922':c.stroke}" stroke-width="${isSel?1.5:.5}"/>`;
-    g += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${esc(n.label)}</text>`;
-    if (n.badge) g += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="#50506e" font-size="9">${n.badge}</text>`;
-    (n.sub||"").split("\n").forEach((l,i) => { g += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="#50506e" font-size="10">${esc(l)}</text>`; });
-    if (n.auth) g += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${esc(n.auth)}</text>`;
-    if (n.io) g += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${esc(n.io)}</text>`;
+    // Node background with subtle inner highlight
+    g += `<rect class="node-bg" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="${c.fill}" stroke="${isSel?'#639922':c.stroke}" stroke-width="${isSel?1.5:.5}"/>`;
+    // Top edge highlight line for depth
+    g += `<line x1="${n.x+8}" y1="${n.y+.5}" x2="${n.x+n.w-8}" y2="${n.y+.5}" stroke="${c.stroke}" stroke-width=".3" opacity=".4" stroke-linecap="round"/>`;
+    // Title
+    g += `<text x="${n.x+14}" y="${n.y+22}" fill="${c.title}" font-size="11.5" font-weight="500" letter-spacing="-.01em">${esc(n.label)}</text>`;
+    // Badge pill
+    if (n.badge) {
+      const bx = n.x+16+n.label.length*7;
+      g += `<rect x="${bx}" y="${n.y+12}" width="${n.badge.length*5.8+8}" height="14" rx="7" fill="${c.stroke}" opacity=".15"/>`;
+      g += `<text x="${bx+n.badge.length*2.9+4}" y="${n.y+22}" fill="${c.stroke}" font-size="7.5" text-anchor="middle" font-weight="500" opacity=".7">${n.badge}</text>`;
+    }
+    // Description lines
+    (n.sub||"").split("\n").forEach((l,i) => {
+      g += `<text x="${n.x+14}" y="${n.y+38+i*14}" fill="#6e6e88" font-size="9.5">${esc(l)}</text>`;
+    });
+    // Authority / IO footer
+    if (n.auth) {
+      g += `<line x1="${n.x+14}" y1="${n.y+n.h-18}" x2="${n.x+n.w-14}" y2="${n.y+n.h-18}" stroke="${c.stroke}" stroke-width=".3" opacity=".15"/>`;
+      g += `<text x="${n.x+14}" y="${n.y+n.h-7}" fill="${c.auth||c.stroke}" font-size="7.5" opacity=".45" letter-spacing=".04em">AUTHORITY  ${esc(n.auth)}</text>`;
+    }
+    if (n.io) {
+      g += `<line x1="${n.x+14}" y1="${n.y+n.h-16}" x2="${n.x+n.w-14}" y2="${n.y+n.h-16}" stroke="${c.stroke}" stroke-width=".3" opacity=".15"/>`;
+      g += `<text x="${n.x+14}" y="${n.y+n.h-5}" fill="${c.io||c.stroke}" font-size="7.5" opacity=".45">${esc(n.io)}</text>`;
+    }
     g += `</g>`;
     nodesHTML += g;
   });
@@ -663,7 +704,19 @@ function updateViewBox() {
 }
 
 function fitView() {
-  zoom = 1; panX = 0; panY = 0;
+  // Find bounding box of all content
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  NODES.forEach(n => { minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+n.w); maxY=Math.max(maxY,n.y+n.h); });
+  if (!NODES.length) { zoom=1; panX=0; panY=0; updateViewBox(); return; }
+  // Include labels in bounding
+  LABELS.forEach(lb => { minX=Math.min(minX,lb.x); minY=Math.min(minY,lb.y-12); maxX=Math.max(maxX,lb.x+100); maxY=Math.max(maxY,lb.y+4); });
+  const pad = 30;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const cw = maxX-minX, ch = maxY-minY;
+  // Zoom to fit with slight padding, max 1.2x
+  zoom = Math.min(W/cw, H/ch, 1.2);
+  panX = minX - (W/zoom - cw)/2;
+  panY = minY - (H/zoom - ch)/2;
   updateViewBox();
 }
 
@@ -1236,6 +1289,7 @@ document.addEventListener("keydown", e => {
 // ============================================================
 loadFromStorage();
 render();
+fitView();
 initGHUser();
 </script>
 </body>
