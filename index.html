@@ -472,6 +472,8 @@ function setupEditEvents(svg) {
   let dragNode = null;
   let dragStart = null;
   let origPos = null;
+  let dragG = null;
+  let hasDragged = false;
 
   svg.addEventListener("mousedown", e => {
     const nodeG = e.target.closest("[data-node]");
@@ -507,10 +509,16 @@ function setupEditEvents(svg) {
       selectedConn = null;
       closeForms();
       dragging = true;
+      hasDragged = false;
       dragNode = ni;
+      dragG = nodeG;
       dragStart = svgPoint(svg, e);
       origPos = {x: NODES[ni].x, y: NODES[ni].y};
-      renderEditSVG();
+      // Highlight immediately without full re-render
+      svg.querySelectorAll(".node-selected").forEach(el => el.classList.remove("node-selected"));
+      nodeG.classList.add("node-selected");
+      const r = nodeG.querySelector("rect");
+      if (r) { r.setAttribute("stroke","var(--green)"); r.setAttribute("stroke-width","2"); }
       e.preventDefault();
     } else if (connG) {
       const ci = parseInt(connG.dataset.conn);
@@ -528,22 +536,36 @@ function setupEditEvents(svg) {
   });
 
   svg.addEventListener("mousemove", e => {
-    if (!dragging || dragNode === null) return;
+    if (!dragging || dragNode === null || !dragG) return;
+    hasDragged = true;
     const pt = svgPoint(svg, e);
-    NODES[dragNode].x = Math.round(origPos.x + pt.x - dragStart.x);
-    NODES[dragNode].y = Math.round(origPos.y + pt.y - dragStart.y);
-    renderEditSVG();
+    const dx = pt.x - dragStart.x;
+    const dy = pt.y - dragStart.y;
+    // Move visually with transform (no re-render)
+    dragG.setAttribute("transform", `translate(${dx},${dy})`);
+    e.preventDefault();
   });
 
-  svg.addEventListener("mouseup", () => {
+  function endDrag() {
+    if (!dragging || dragNode === null) return;
+    if (hasDragged && dragG) {
+      const t = dragG.getAttribute("transform");
+      if (t) {
+        const m = t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
+        if (m) {
+          NODES[dragNode].x = Math.round(origPos.x + parseFloat(m[1]));
+          NODES[dragNode].y = Math.round(origPos.y + parseFloat(m[2]));
+        }
+      }
+      renderEditSVG();
+    }
     dragging = false;
     dragNode = null;
-  });
+    dragG = null;
+  }
 
-  svg.addEventListener("mouseleave", () => {
-    dragging = false;
-    dragNode = null;
-  });
+  svg.addEventListener("mouseup", endDrag);
+  svg.addEventListener("mouseleave", endDrag);
 
   svg.addEventListener("dblclick", e => {
     const nodeG = e.target.closest("[data-node]");
