@@ -21,789 +21,912 @@
 body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
 .grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
   background-image:linear-gradient(rgba(100,100,140,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(100,100,140,.06) 1px,transparent 1px);background-size:48px 48px}
+
+/* Header */
 header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
-  padding:10px 24px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);flex-shrink:0;backdrop-filter:blur(8px)}
-header h1{font-size:14px;font-weight:500}
+  padding:8px 16px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);flex-shrink:0;backdrop-filter:blur(8px)}
+header h1{font-size:13px;font-weight:500;letter-spacing:-.01em}
 header h1 span{color:var(--t3);font-weight:400}
-.controls{display:flex;gap:3px;align-items:center}
-.tog{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px 4px 7px;border-radius:6px;
-  border:1px solid var(--b1);background:0;color:var(--t3);cursor:pointer;transition:all .2s;
-  display:flex;align-items:center;gap:5px;user-select:none}
-.tog:hover{border-color:var(--b2);color:var(--t2)}
-.tog .d{width:7px;height:7px;border-radius:50%;opacity:.25;transition:opacity .2s}
-.tog.on{border-color:var(--b2);color:var(--t1)}
+.hgroup{display:flex;gap:2px;align-items:center}
+.tog{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px 3px 6px;border-radius:5px;
+  border:1px solid transparent;background:0;color:var(--t3);cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:4px;user-select:none}
+.tog:hover{background:var(--s2);color:var(--t2)}
+.tog .d{width:6px;height:6px;border-radius:50%;opacity:.3;transition:opacity .15s}
+.tog.on{color:var(--t1);background:var(--s2)}
 .tog.on .d{opacity:1}
-.tog .k{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
-  border-radius:3px;border:1px solid var(--b1);font-size:9px;color:var(--t3);margin-left:2px}
-.sep{width:1px;height:20px;background:var(--b1);margin:0 6px}
-.edit-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 12px;border-radius:6px;
-  border:1px solid var(--green);background:var(--gnl);color:var(--gnh);cursor:pointer;transition:all .2s;
-  display:flex;align-items:center;gap:5px}
-.edit-btn:hover{background:var(--green);color:#fff}
-.edit-btn.loading{opacity:.5;pointer-events:none}
-#view-mode{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:4px 12px;min-height:0}
-#view-mode svg{width:100%;height:100%;max-width:1400px;max-height:calc(100vh - 48px)}
-#view-mode svg text{font-family:'IBM Plex Mono',monospace}
+.tog .k{font-size:8px;color:var(--t3);margin-left:1px;opacity:.5}
+.sep{width:1px;height:16px;background:var(--b1);margin:0 4px}
+.hbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 10px;border-radius:5px;
+  border:1px solid var(--b1);background:0;color:var(--t2);cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:4px}
+.hbtn:hover{background:var(--s2);color:var(--t1)}
+.hbtn.active{background:var(--gnl);color:var(--gnh);border-color:var(--green)}
+.hbtn.primary{border-color:var(--green);color:var(--gnh)}
+.hbtn.primary:hover{background:var(--green);color:#fff}
+.hbtn.danger:hover{background:var(--cl);color:var(--ch);border-color:var(--coral)}
+.hbtn svg{width:12px;height:12px}
+.mode-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+
+/* Canvas */
+#canvas-wrap{flex:1;position:relative;overflow:hidden;cursor:default}
+#canvas-wrap.editing{cursor:default}
+#canvas-wrap.editing .node-g{cursor:grab}
+#canvas-wrap.editing .node-g:active{cursor:grabbing}
+#canvas-wrap.panning{cursor:grabbing}
+#canvas{width:100%;height:100%}
+#canvas text{font-family:'IBM Plex Mono',monospace}
+
+/* Layers */
 .lay{transition:opacity .3s ease}
 .lay.off{opacity:0;pointer-events:none}
 .zbg{transition:opacity .3s ease}
 .zbg.off{opacity:0}
 @keyframes fr{to{stroke-dashoffset:-24}}
 @keyframes fu{to{stroke-dashoffset:-16}}
-@keyframes fc{to{stroke-dashoffset:-18}}
 .ar{stroke-dasharray:8 6;animation:fr 1.2s linear infinite}
 .au{stroke-dasharray:5 4;animation:fu 1.6s linear infinite}
-.ac{stroke-dasharray:6 5;animation:fc 1s linear infinite}
-.help{position:fixed;bottom:8px;left:24px;z-index:10;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t3)}
+
+/* Node hover/selection */
+.node-g{transition:filter .15s}
+#canvas-wrap.editing .node-g:hover rect:first-child{stroke-width:1.2;filter:brightness(1.15)}
+.node-g.selected rect:first-child{stroke:var(--green)!important;stroke-width:2!important}
+@keyframes march{to{stroke-dashoffset:-12}}
+.node-g.selected .sel-border{stroke-dasharray:4 2;animation:march .4s linear infinite;opacity:1}
+.conn-g.selected line:nth-child(2){stroke-width:3!important}
+
+/* Side panel */
+#panel{position:absolute;right:0;top:0;bottom:0;width:280px;background:var(--s1);border-left:1px solid var(--b1);
+  z-index:15;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:11px}
+#panel.open{transform:translateX(0)}
+#panel .ph{padding:12px 14px 8px;font-size:9px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;
+  border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+#panel .ph button{background:0;border:0;color:var(--t3);cursor:pointer;font-size:14px;line-height:1;padding:2px}
+#panel .ph button:hover{color:var(--t1)}
+#panel .pg{padding:10px 14px}
+#panel label{display:block;font-size:8px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;margin:10px 0 4px}
+#panel label:first-child{margin-top:0}
+#panel input,#panel textarea,#panel select{width:100%;padding:5px 8px;border-radius:4px;border:1px solid var(--b1);
+  background:var(--s2);color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;transition:border .15s}
+#panel input:focus,#panel textarea:focus,#panel select:focus{border-color:var(--green)}
+#panel textarea{resize:vertical;min-height:48px}
+.color-chips{display:flex;gap:4px;margin-top:4px}
+.color-chip{width:24px;height:24px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:all .15s}
+.color-chip:hover{transform:scale(1.1)}
+.color-chip.active{border-color:var(--t1);box-shadow:0 0 0 1px var(--bg)}
+.pos-row{display:flex;gap:6px}
+.pos-row input{width:50%}
+
+/* Context menu */
+#ctx-menu{position:fixed;z-index:30;background:var(--s1);border:1px solid var(--b2);border-radius:8px;
+  padding:4px;min-width:160px;box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;font-family:'IBM Plex Mono',monospace;font-size:11px}
+#ctx-menu.visible{display:block}
+#ctx-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;border:0;border-radius:4px;
+  background:0;color:var(--t1);cursor:pointer;font-family:inherit;font-size:inherit;text-align:left}
+#ctx-menu button:hover{background:var(--s2)}
+#ctx-menu button .shortcut{margin-left:auto;color:var(--t3);font-size:9px}
+#ctx-menu button.danger{color:var(--ch)}
+#ctx-menu .ctx-sep{height:1px;background:var(--b1);margin:3px 6px}
+
+/* Command palette */
+#cmd-palette{position:fixed;z-index:40;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);
+  backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding-top:20vh}
+#cmd-palette.visible{display:flex}
+#cmd-box{width:420px;background:var(--s1);border:1px solid var(--b2);border-radius:12px;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);overflow:hidden}
+#cmd-input{width:100%;padding:14px 16px;border:0;border-bottom:1px solid var(--b1);
+  background:0;color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none}
+#cmd-input::placeholder{color:var(--t3)}
+#cmd-results{max-height:280px;overflow-y:auto}
+#cmd-results button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;border:0;
+  background:0;color:var(--t1);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:left}
+#cmd-results button:hover,#cmd-results button.active{background:var(--s2)}
+#cmd-results button .cmd-key{margin-left:auto;color:var(--t3);font-size:10px;padding:1px 6px;
+  border:1px solid var(--b1);border-radius:3px}
+#cmd-results .cmd-icon{width:18px;color:var(--t3)}
+
+/* Zoom indicator */
+#zoom-badge{position:absolute;bottom:12px;left:12px;z-index:10;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;color:var(--t3);padding:3px 8px;background:rgba(11,11,18,.8);border-radius:4px;
+  border:1px solid var(--b1);user-select:none;backdrop-filter:blur(4px)}
+
+/* Help bar */
+.help{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);
+  padding:4px 12px;background:rgba(11,11,18,.8);border-radius:6px;border:1px solid var(--b1);
+  backdrop-filter:blur(4px);white-space:nowrap;user-select:none}
 .help b{color:var(--t2)}
-#edit-mode{display:none;flex:1;position:relative;z-index:2;flex-direction:column}
-#edit-mode.active{display:flex}
-#view-mode.hidden{display:none}
-.help.hidden{display:none}
-#edit-canvas{flex:1;width:100%;cursor:default}
-#edit-canvas svg{width:100%;height:100%}
-#edit-canvas svg text{font-family:'IBM Plex Mono',monospace}
-.edit-toolbar{display:flex;gap:3px;padding:6px 12px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);align-items:center;flex-shrink:0}
-.edit-toolbar button{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;
-  border:1px solid var(--b1);background:0;color:var(--t2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px}
-.edit-toolbar button:hover{border-color:var(--b2);color:var(--t1)}
-.edit-toolbar button.active{border-color:var(--green);color:var(--gnh);background:var(--gnl)}
-.edit-toolbar button.danger{border-color:var(--coral);color:var(--ch)}
-.edit-toolbar button.danger:hover{background:var(--cl)}
-.edit-toolbar button.primary{border-color:var(--green);color:var(--gnh)}
-.edit-toolbar button.primary:hover{background:var(--green);color:#fff}
-.edit-toolbar .sep{width:1px;height:20px;background:var(--b1);margin:0 4px}
-.node-selected rect:first-child{stroke-width:2!important;filter:drop-shadow(0 0 6px rgba(99,153,34,.4))}
-.conn-selected{stroke-width:3!important;filter:drop-shadow(0 0 4px rgba(99,153,34,.5))}
-.edit-node-group{cursor:grab}
-.edit-node-group:active{cursor:grabbing}
-#node-form,#conn-form{position:absolute;z-index:20;background:var(--s1);border:1px solid var(--b2);border-radius:8px;
-  padding:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--t1);min-width:300px;
-  box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
-#node-form.visible,#conn-form.visible{display:block}
-#node-form label,#conn-form label{display:block;color:var(--t3);font-size:9px;letter-spacing:.08em;margin:8px 0 3px;text-transform:uppercase}
-#node-form label:first-child,#conn-form label:first-child{margin-top:0}
-#node-form input,#node-form textarea,#node-form select,
-#conn-form input,#conn-form select{width:100%;padding:4px 8px;border-radius:4px;border:1px solid var(--b1);
-  background:var(--s2);color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none}
-#node-form input:focus,#node-form textarea:focus,#node-form select:focus,
-#conn-form input:focus,#conn-form select:focus{border-color:var(--green)}
-#node-form textarea{resize:vertical;min-height:40px}
-.form-actions{display:flex;gap:6px;margin-top:10px;justify-content:flex-end}
-.form-actions button{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--b1);background:0;color:var(--t2)}
-.form-actions button.save{border-color:var(--green);color:var(--gnh)}
-.form-actions button.save:hover{background:var(--green);color:#fff}
 </style>
 </head>
 <body>
 <div class="grid"></div>
+
 <header>
   <h1>Org architecture <span>— rent receivable factoring</span></h1>
-  <div class="controls">
-    <div class="toggles" id="toggles">
-      <button class="tog on" id="t-deal" onclick="tog('deal')"><span class="d" style="background:var(--teal)"></span>Deal flow<span class="k">1</span></button>
-      <button class="tog" id="t-esc" onclick="tog('esc')"><span class="d" style="background:var(--coral)"></span>Escalation<span class="k">2</span></button>
-      <button class="tog" id="t-data" onclick="tog('data')"><span class="d" style="background:var(--purple)"></span>Data flow<span class="k">3</span></button>
-      <button class="tog" id="t-cash" onclick="tog('cash')"><span class="d" style="background:var(--green)"></span>Cashflow<span class="k">4</span></button>
-    </div>
+  <div class="hgroup">
+    <button class="tog on" id="t-deal" onclick="tog('deal')"><span class="d" style="background:var(--teal)"></span>Deal<span class="k">1</span></button>
+    <button class="tog" id="t-esc" onclick="tog('esc')"><span class="d" style="background:var(--coral)"></span>Esc<span class="k">2</span></button>
+    <button class="tog" id="t-data" onclick="tog('data')"><span class="d" style="background:var(--purple)"></span>Data<span class="k">3</span></button>
+    <button class="tog" id="t-cash" onclick="tog('cash')"><span class="d" style="background:var(--green)"></span>Cash<span class="k">4</span></button>
     <div class="sep"></div>
-    <button class="edit-btn" id="edit-btn" onclick="enterEdit()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Edit layout
+    <span class="mode-label" id="mode-label">browse</span>
+    <button class="hbtn" id="edit-toggle" onclick="toggleEdit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </button>
+    <div class="sep" id="edit-tools" style="display:none"></div>
+    <button class="hbtn primary" id="btn-add-node" onclick="addNode()" style="display:none">+ Node</button>
+    <button class="hbtn" id="btn-add-conn" onclick="startAddConn()" style="display:none">+ Conn</button>
+    <button class="hbtn" id="btn-undo" onclick="undo()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/></svg>
+    </button>
+    <button class="hbtn" id="btn-redo" onclick="redo()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-5.64-11.36L23 10"/></svg>
+    </button>
+    <div class="sep" id="cmd-sep" style="display:none"></div>
+    <button class="hbtn" onclick="openCmd()" title="⌘K">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
   </div>
 </header>
 
-<div id="view-mode">
-<!-- SVG is identical to previous version - generated from data on load -->
+<div id="canvas-wrap">
+  <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="panel"></div>
+  <div id="zoom-badge">100%</div>
+  <div class="help" id="help-bar"><b>1-4</b> layers &nbsp; <b>A</b> all &nbsp; <b>0</b> none &nbsp; <b>E</b> edit &nbsp; <b>F</b> fit &nbsp; <b>⌘K</b> commands</div>
 </div>
 
-
-<div id="edit-mode">
-  <div class="edit-toolbar">
-    <button onclick="addNode()" class="primary">+ Node</button>
-    <button onclick="startAddConn()" id="add-conn-btn">+ Connection</button>
-    <div class="sep"></div>
-    <button onclick="deleteSelected()" class="danger" id="del-btn">Delete</button>
-    <div class="sep"></div>
-    <button class="tog" id="et-deal" onclick="etog('deal')"><span class="d" style="background:var(--teal)"></span>Deal</button>
-    <button class="tog" id="et-esc" onclick="etog('esc')"><span class="d" style="background:var(--coral)"></span>Esc</button>
-    <button class="tog" id="et-data" onclick="etog('data')"><span class="d" style="background:var(--purple)"></span>Data</button>
-    <button class="tog" id="et-cash" onclick="etog('cash')"><span class="d" style="background:var(--green)"></span>Cash</button>
-    <div style="flex:1"></div>
-    <button onclick="exitEdit()" class="primary">Done</button>
+<div id="ctx-menu"></div>
+<div id="cmd-palette">
+  <div id="cmd-box">
+    <input id="cmd-input" placeholder="Type a command..." autocomplete="off">
+    <div id="cmd-results"></div>
   </div>
-  <div id="edit-canvas"></div>
-  <div id="node-form"></div>
-  <div id="conn-form"></div>
 </div>
-
-<div class="help" id="help-bar"><b>1</b> deal &nbsp; <b>2</b> escalation &nbsp; <b>3</b> data &nbsp; <b>4</b> cashflow &nbsp; <b>A</b> all &nbsp; <b>0</b> nodes only &nbsp; <b>E</b> edit</div>
 
 <script>
 // ============================================================
-// DATA MODEL — single source of truth for both views
+// DATA MODEL
 // ============================================================
 const NODES = [
-  // Humans
   {id:"ceo", label:"CEO / Partnerships", sub:"PM acquisition · pricing · workouts\nInvestor relations · strategic direction", auth:"pricing, PM terms, write-offs", row:"human", type:"coral", x:60, y:74, w:310, h:100},
   {id:"credit", label:"Head of Credit", sub:"Underwriting policy · risk thresholds · exceptions\nPortfolio monitoring · concentration limits", auth:"approve/decline, limits, UW policy", row:"human", type:"coral", x:410, y:74, w:340, h:100},
   {id:"eng", label:"Head of Eng / Ops", sub:"Platform · agent orchestration\nPM integrations · compliance infra", auth:"system changes, deployments", row:"human", type:"coral", x:790, y:74, w:300, h:100},
-  // Processing
   {id:"intake", label:"Intake Agent", badge:"LLM", sub:"Reads bids, leases, rent rolls\nExtracts structured deal data", io:"IN: PM docs → OUT: deal record", row:"agent", type:"purple", x:30, y:282, w:242, h:84},
   {id:"scoring", label:"Scoring Engine", badge:"RULES", sub:"Rent coverage · lease term · LTV\nPM track record · concentration", io:"IN: deal record → OUT: decision", row:"agent", type:"teal", x:306, y:282, w:242, h:84},
   {id:"servicing", label:"Servicing Engine", badge:"RULES", sub:"Rent-split calc · ACH · reconcile\nPayment tracking · UCC lifecycle", io:"IN: funded deal → OUT: payments", row:"agent", type:"teal", x:582, y:282, w:242, h:84},
   {id:"comms", label:"Comms Agent", badge:"LLM", sub:"PM status · payment confirms\nSupport triage · collections", io:"IN: events → OUT: messages", row:"agent", type:"purple", x:858, y:282, w:242, h:84},
-  // Infra
   {id:"pm_adapt", label:"PM Platform Adapters", sub:"AppFolio · Buildium · Rentvine\nNormalized schema", row:"infra", type:"gray", x:30, y:560, w:240, h:72},
   {id:"ledger", label:"Deal Ledger", sub:"State · payments · UCC status\nTrue-sale audit trail", row:"infra", type:"gray", x:300, y:560, w:240, h:72},
   {id:"column", label:"Column Bank", sub:"ACH origination · receipt\nFBO accounts · ledger", row:"infra", type:"green", x:570, y:560, w:240, h:72},
   {id:"kb", label:"Knowledge Base", sub:"UW policy · PM profiles\nCompliance · templates", row:"infra", type:"gray", x:840, y:560, w:240, h:72},
-  // Cashflow externals
   {id:"facility", label:"Credit Facility", sub:"Warehouse line", row:"cashflow", type:"green", x:50, y:684, w:160, h:44},
   {id:"contractor", label:"Contractor / PM", sub:"Receives repair funds", row:"cashflow", type:"green", x:1060, y:684, w:170, h:44},
 ];
 
 const CONNECTIONS = [
-  // Deal flow
   {from:"intake", to:"scoring", layer:"deal", color:"teal", style:"animated"},
   {from:"scoring", to:"servicing", layer:"deal", color:"teal", style:"animated"},
   {from:"servicing", to:"comms", layer:"deal", color:"teal", style:"animated"},
-  // Escalation
   {from:"scoring", to:"credit", layer:"esc", color:"coral", style:"dashed", label:"gray zone · >$25k"},
   {from:"servicing", to:"credit", layer:"esc", color:"coral", style:"dashed", label:"vacancy · 30d+ late"},
   {from:"comms", to:"ceo", layer:"esc", color:"coral", style:"dashed", label:"PM dispute"},
-  // Data flow
   {from:"pm_adapt", to:"intake", layer:"data", color:"purple", style:"animated-up"},
   {from:"ledger", to:"scoring", layer:"data", color:"purple", style:"animated-up"},
   {from:"ledger", to:"servicing", layer:"data", color:"purple", style:"animated-up"},
   {from:"kb", to:"comms", layer:"data", color:"purple", style:"animated-up"},
   {from:"kb", to:"scoring", layer:"data", color:"purple", style:"animated-up", opacity:.35},
   {from:"pm_adapt", to:"servicing", layer:"data", color:"purple", style:"animated-up", opacity:.35, label:"occupancy polls"},
-  // Cashflow
   {from:"facility", to:"column", layer:"cash", color:"green", style:"animated", label:"$ Facility draw"},
   {from:"column", to:"contractor", layer:"cash", color:"green", style:"animated", label:"$ Disbursement"},
   {from:"servicing", to:"column", layer:"cash", color:"green", style:"dashed", label:"ACH instructions"},
 ];
 
 const DEAL_STATES = [
-  {label:"Received", x:46},
-  {label:"Scoring", x:164},
-  {label:"Approved", x:274},
-  {label:"Funded", x:394},
-  {label:"Active", x:502},
-  {label:"Closed", x:700},
+  {label:"Received", x:46}, {label:"Scoring", x:164}, {label:"Approved", x:274},
+  {label:"Funded", x:394}, {label:"Active", x:502}, {label:"Closed", x:700},
 ];
 
-// ============================================================
-// SVG OVERLAY VIEW RENDERER
-// ============================================================
 const COLORS = {
-  coral: {fill:"var(--cl)", stroke:"var(--coral)", title:"var(--ch)", auth:"var(--coral)"},
-  teal: {fill:"var(--tl)", stroke:"var(--teal)", title:"var(--th)", io:"var(--teal)"},
-  purple: {fill:"var(--pl)", stroke:"var(--purple)", title:"var(--ph)", io:"var(--purple)"},
-  gray: {fill:"var(--gl)", stroke:"var(--gm)", title:"var(--gh)"},
-  green: {fill:"var(--gnl)", stroke:"var(--green)", title:"var(--gnh)"},
+  coral: {fill:"#2c1810", stroke:"#D85A30", title:"#F0997B", auth:"#D85A30"},
+  teal: {fill:"#0e3028", stroke:"#1D9E75", title:"#5DCAA5", io:"#1D9E75"},
+  purple: {fill:"#1e1840", stroke:"#7F77DD", title:"#AFA9EC", io:"#7F77DD"},
+  gray: {fill:"#1a1a26", stroke:"#40405a", title:"#9898aa"},
+  green: {fill:"#152e08", stroke:"#639922", title:"#97C459"},
 };
 
-function getNodeCenter(id) {
-  const n = NODES.find(n => n.id === id);
-  return {x: n.x + n.w/2, y: n.y + n.h/2, top: n.y, bot: n.y+n.h, left: n.x, right: n.x+n.w};
+// ============================================================
+// STATE
+// ============================================================
+const layers = {deal:true, esc:false, data:false, cash:false};
+let editing = false;
+let selected = null; // {type:'node'|'conn', index:N}
+let addingConn = false, connFrom = null;
+let zoom = 1, panX = 0, panY = 0;
+const W = 1280, H = 760;
+
+// Undo
+const undoStack = [], redoStack = [];
+function snapshot() {
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  redoStack.length = 0;
+  if (undoStack.length > 50) undoStack.shift();
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  const s = undoStack.pop();
+  NODES.length = 0; NODES.push(...s.n);
+  CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
+  selected = null; render();
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  const s = redoStack.pop();
+  NODES.length = 0; NODES.push(...s.n);
+  CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
+  selected = null; render();
 }
 
-function connectorPoints(fromId, toId) {
-  const f = getNodeCenter(fromId), t = getNodeCenter(toId);
+// ============================================================
+// HELPERS
+// ============================================================
+function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function getNode(id) { return NODES.find(n => n.id === id); }
+function nodeCenter(id) {
+  const n = getNode(id);
+  return {x:n.x+n.w/2, y:n.y+n.h/2, top:n.y, bot:n.y+n.h, left:n.x, right:n.x+n.w};
+}
+function connPts(fromId, toId) {
+  const f = nodeCenter(fromId), t = nodeCenter(toId);
   let fx,fy,tx,ty;
-  if (t.top > f.bot + 20) { fx=f.x; fy=f.bot; tx=t.x; ty=t.top; }
-  else if (f.top > t.bot + 20) { fx=f.x; fy=f.top; tx=t.x; ty=t.bot; }
+  if (t.top > f.bot+20) { fx=f.x; fy=f.bot; tx=t.x; ty=t.top; }
+  else if (f.top > t.bot+20) { fx=f.x; fy=f.top; tx=t.x; ty=t.bot; }
   else { fx=f.right; fy=f.y; tx=t.left; ty=t.y; }
   return {fx,fy,tx,ty};
 }
+function svgPt(e) {
+  const svg = document.getElementById("canvas");
+  const r = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  return {
+    x: (e.clientX - r.left) / r.width * vb.width + vb.x,
+    y: (e.clientY - r.top) / r.height * vb.height + vb.y
+  };
+}
 
-function renderSVG() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.setAttribute("viewBox","0 0 1280 760");
-  svg.innerHTML = `<defs>
-    <marker id="at" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="acl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--coral)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="ap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="agn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-  </defs>`;
+// ============================================================
+// RENDER — single unified pass
+// ============================================================
+function render() {
+  const svg = document.getElementById("canvas");
+  updateViewBox();
 
-  // Zone bgs
-  svg.innerHTML += `<rect class="zbg" id="z-esc" x="0" y="134" width="1280" height="112" fill="var(--coral)" opacity=".015"/>`;
-  svg.innerHTML += `<rect class="zbg off" id="z-data" x="0" y="472" width="1280" height="82" fill="var(--purple)" opacity=".018"/>`;
-  svg.innerHTML += `<rect class="zbg off" id="z-cash" x="0" y="670" width="1280" height="86" fill="var(--green)" opacity=".02"/>`;
+  const markerDefs = ['teal','coral','purple','green'].map(c =>
+    `<marker id="m-${c}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="${COLORS[c].stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>`
+  ).join("");
+
+  let html = `<defs>${markerDefs}</defs>`;
+  html += `<rect width="${W}" height="${H}" fill="#0b0b12"/>`;
+
+  // Zone backgrounds
+  html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="134" width="${W}" height="112" fill="#D85A30" opacity=".015"/>`;
+  html += `<rect class="zbg${layers.data?'':' off'}" id="z-data" x="0" y="472" width="${W}" height="82" fill="#7F77DD" opacity=".018"/>`;
+  html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="670" width="${W}" height="86" fill="#639922" opacity=".02"/>`;
 
   // Row labels
-  svg.innerHTML += `<text x="30" y="28" fill="var(--t3)" font-size="9" letter-spacing=".1em">HUMANS</text>`;
-  svg.innerHTML += `<text x="30" y="244" fill="var(--t3)" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
-  svg.innerHTML += `<text x="30" y="552" fill="var(--t3)" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
-
-  // Nodes
-  NODES.forEach(n => {
-    const c = COLORS[n.type];
-    let inner = `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${c.stroke}" stroke-width="0.5"/>`;
-    inner += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${n.label}</text>`;
-    if (n.badge) inner += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="var(--t3)" font-size="9">${n.badge}</text>`;
-    const lines = (n.sub||"").split("\n");
-    lines.forEach((l,i) => { inner += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="var(--t3)" font-size="10">${l}</text>`; });
-    if (n.auth) inner += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${n.auth}</text>`;
-    if (n.io) inner += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${n.io}</text>`;
-    svg.innerHTML += `<g class="node">${inner}</g>`;
-  });
+  html += `<text x="30" y="28" fill="#50506e" font-size="9" letter-spacing=".1em">HUMANS</text>`;
+  html += `<text x="30" y="244" fill="#50506e" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
+  html += `<text x="30" y="552" fill="#50506e" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
 
   // Connections per layer
-  const markerMap = {teal:"at",coral:"acl",purple:"ap",green:"agn"};
-  const layerGroups = {deal:"", esc:"", data:"", cash:""};
-
-  CONNECTIONS.forEach(cn => {
-    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
-    const marker = markerMap[cn.color];
-    const op = cn.opacity || 1;
-    let cls = "";
-    let sw = 1.5;
-    let dash = "";
-    if (cn.style === "animated") { cls = "ar"; }
-    else if (cn.style === "animated-up") { cls = "au"; sw = 0.8; }
-    else if (cn.style === "dashed") { dash = 'stroke-dasharray="4 4"'; sw = 0.8; }
-    let line = `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="var(--${cn.color})" stroke-width="${sw}" class="${cls}" ${dash} opacity="${op}" marker-end="url(#${marker})"/>`;
-    if (cn.label) {
-      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
-      line += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="var(--s2)" stroke="var(--b1)" stroke-width="0.5"/>`;
-      line += `<text x="${mx}" y="${my+2}" fill="var(--ah)" font-size="8" text-anchor="middle">${cn.label}</text>`;
-    }
-    layerGroups[cn.layer] += line;
-  });
-
-  // Deal states
-  let dealExtra = `<text x="30" y="378" fill="var(--teal)" font-size="9" letter-spacing=".06em" opacity=".5">DEAL STATES</text>`;
-  DEAL_STATES.forEach((s,i) => {
-    const w = s.label.length * 7 + 16;
-    dealExtra += `<rect x="${s.x}" y="390" width="${w}" height="20" rx="10" fill="var(--tl)" stroke="var(--teal)" stroke-width="0.5"/>`;
-    dealExtra += `<text x="${s.x+w/2}" y="404" fill="var(--th)" font-size="9" text-anchor="middle" font-weight="500">${s.label}</text>`;
-    if (i < DEAL_STATES.length - 1) {
-      const nx = DEAL_STATES[i+1].x;
-      dealExtra += `<line x1="${s.x+w}" y1="400" x2="${nx}" y2="400" stroke="var(--teal)" stroke-width="0.4" opacity=".35" marker-end="url(#at)"/>`;
-    }
-  });
-  // Exception states
-  dealExtra += `<rect x="200" y="434" width="104" height="20" rx="10" fill="var(--cl)" stroke="var(--coral)" stroke-width="0.5"/>`;
-  dealExtra += `<text x="252" y="448" fill="var(--ch)" font-size="8" text-anchor="middle" font-weight="500">Human review</text>`;
-  dealExtra += `<rect x="540" y="434" width="44" height="20" rx="10" fill="var(--s2)" stroke="var(--amber)" stroke-width="0.5"/>`;
-  dealExtra += `<text x="562" y="448" fill="var(--ah)" font-size="8" text-anchor="middle" font-weight="500">Late</text>`;
-  dealExtra += `<rect x="614" y="434" width="66" height="20" rx="10" fill="var(--cl)" stroke="var(--coral)" stroke-width="0.5"/>`;
-  dealExtra += `<text x="647" y="448" fill="var(--ch)" font-size="8" text-anchor="middle" font-weight="500">Workout</text>`;
-  dealExtra += `<line x1="584" y1="444" x2="612" y2="444" stroke="var(--coral)" stroke-width="0.3" opacity=".4" marker-end="url(#acl)"/>`;
-  layerGroups.deal += dealExtra;
-
-  // Escalation principle
-  layerGroups.esc += `<rect x="840" y="148" width="236" height="30" rx="6" fill="var(--s1)" stroke="var(--coral)" stroke-width="0.5" opacity=".6"/>`;
-  layerGroups.esc += `<text x="858" y="162" fill="var(--ch)" font-size="9" font-weight="500">Principle</text>`;
-  layerGroups.esc += `<text x="858" y="174" fill="var(--t3)" font-size="8">No human monitors. Agents detect, package, route.</text>`;
-
-  // Cashflow annotation
-  layerGroups.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="var(--s1)" stroke="var(--green)" stroke-width="0.5" opacity=".5"/>`;
-  layerGroups.cash += `<text x="700" y="752" fill="var(--gnh)" font-size="8" text-anchor="middle">$ Factor discount = revenue</text>`;
-
-  // Build layer groups
-  svg.innerHTML += `<g class="lay" id="l-deal">${layerGroups.deal}</g>`;
-  svg.innerHTML += `<g class="lay off" id="l-esc">${layerGroups.esc}</g>`;
-  svg.innerHTML += `<g class="lay off" id="l-data">${layerGroups.data}</g>`;
-  svg.innerHTML += `<g class="lay off" id="l-cash">${layerGroups.cash}</g>`;
-
-  document.getElementById("view-mode").innerHTML = "";
-  document.getElementById("view-mode").appendChild(svg);
-}
-
-// ============================================================
-// OVERLAY TOGGLE LOGIC
-// ============================================================
-const st = {deal:true, esc:false, data:false, cash:false};
-const zm = {esc:["z-esc"], data:["z-data"], cash:["z-cash"]};
-
-function sync() {
-  for (const k in st) {
-    const l = document.getElementById("l-"+k);
-    const b = document.getElementById("t-"+k);
-    if (l) l.classList.toggle("off", !st[k]);
-    if (b) b.classList.toggle("on", st[k]);
-    (zm[k]||[]).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("off", !st[k]);
-    });
-  }
-}
-function tog(k) { st[k] = !st[k]; sync(); }
-
-// ============================================================
-// NATIVE SVG EDITOR
-// ============================================================
-let editActive = false;
-let selectedNode = null;
-let selectedConn = null;
-let addingConn = false;
-let connFromNode = null;
-const est = {deal:true, esc:true, data:true, cash:true};
-
-function enterEdit() {
-  if (editActive) return;
-  editActive = true;
-  closeForms();
-  selectedNode = null;
-  selectedConn = null;
-  document.getElementById("view-mode").classList.add("hidden");
-  document.getElementById("help-bar").classList.add("hidden");
-  document.getElementById("toggles").style.display = "none";
-  document.getElementById("edit-mode").classList.add("active");
-  // sync editor layer toggles
-  for (const k in est) {
-    const b = document.getElementById("et-"+k);
-    if (b) b.classList.toggle("on", est[k]);
-  }
-  renderEditSVG();
-}
-
-function exitEdit() {
-  editActive = false;
-  addingConn = false;
-  connFromNode = null;
-  closeForms();
-  document.getElementById("edit-mode").classList.remove("active");
-  document.getElementById("view-mode").classList.remove("hidden");
-  document.getElementById("help-bar").classList.remove("hidden");
-  document.getElementById("toggles").style.display = "flex";
-  renderSVG();
-  sync();
-}
-
-function etog(k) {
-  est[k] = !est[k];
-  const b = document.getElementById("et-"+k);
-  if (b) b.classList.toggle("on", est[k]);
-  renderEditSVG();
-}
-
-function closeForms() {
-  document.getElementById("node-form").classList.remove("visible");
-  document.getElementById("conn-form").classList.remove("visible");
-  const il = document.getElementById("inline-label");
-  if (il) il.remove();
-}
-
-function showInlineLabelEdit(ci, svgX, svgY, svg) {
-  closeForms();
-  const cn = CONNECTIONS[ci];
-  const rect = svg.getBoundingClientRect();
-  const vb = svg.viewBox.baseVal;
-  // Convert SVG coords to screen coords
-  const screenX = rect.left + (svgX / vb.width) * rect.width;
-  const screenY = rect.top + (svgY / vb.height) * rect.height;
-  const canvas = document.getElementById("edit-canvas");
-  const canvasRect = canvas.getBoundingClientRect();
-
-  const input = document.createElement("input");
-  input.id = "inline-label";
-  input.value = cn.label || "";
-  input.placeholder = "Label (optional)";
-  input.style.cssText = `position:absolute;z-index:25;
-    left:${screenX - canvasRect.left - 80}px;top:${screenY - canvasRect.top - 12}px;
-    width:160px;padding:4px 8px;border-radius:6px;border:1px solid var(--green);
-    background:var(--s1);color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:11px;
-    text-align:center;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
-
-  function commit() {
-    cn.label = input.value || undefined;
-    input.remove();
-    renderEditSVG();
-  }
-  input.addEventListener("keydown", e => {
-    if (e.key === "Enter") commit();
-    if (e.key === "Escape") { input.remove(); }
-    e.stopPropagation();
-  });
-  input.addEventListener("blur", commit);
-
-  // Place in edit-canvas (which is position:relative via edit-mode)
-  document.getElementById("edit-mode").appendChild(input);
-  input.focus();
-  input.select();
-}
-
-function renderEditSVG() {
-  const canvas = document.getElementById("edit-canvas");
-  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.setAttribute("viewBox","0 0 1280 760");
-
-  // Defs (same markers)
-  svg.innerHTML = `<defs>
-    <marker id="eat" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="eacl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--coral)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="eap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="eagn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-  </defs>`;
-
-  // Grid
-  svg.innerHTML += `<rect width="1280" height="760" fill="var(--bg)"/>`;
-
-  // Row labels
-  svg.innerHTML += `<text x="30" y="28" fill="var(--t3)" font-size="9" letter-spacing=".1em">HUMANS</text>`;
-  svg.innerHTML += `<text x="30" y="244" fill="var(--t3)" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
-  svg.innerHTML += `<text x="30" y="552" fill="var(--t3)" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
-
-  // Connections (rendered behind nodes)
-  const emarkerMap = {teal:"eat",coral:"eacl",purple:"eap",green:"eagn"};
+  const layerHTML = {deal:"", esc:"", data:"", cash:""};
   CONNECTIONS.forEach((cn, ci) => {
-    const layerMap = {deal:"deal",esc:"esc",data:"data",cash:"cash"};
-    if (!est[cn.layer]) return;
-    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
-    const marker = emarkerMap[cn.color];
+    const {fx,fy,tx,ty} = connPts(cn.from, cn.to);
+    const c = COLORS[cn.color];
     const op = cn.opacity || 1;
-    const isSel = selectedConn === ci;
-    const sw = isSel ? 3 : (cn.style==="animated-up" ? 0.8 : cn.style==="dashed" ? 0.8 : 1.5);
-    let dash = "";
-    if (cn.style === "dashed") dash = 'stroke-dasharray="4 4"';
-    let g = `<g data-conn="${ci}" class="edit-conn" style="cursor:pointer">`;
-    // Wider invisible hit area
-    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="transparent" stroke-width="12"/>`;
-    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="var(--${cn.color})" stroke-width="${sw}" ${dash} opacity="${op}" marker-end="url(#${marker})" ${isSel?'class="conn-selected"':''}/>`;
+    const isSel = selected && selected.type==='conn' && selected.index===ci;
+    let cls = cn.style==="animated"?"ar":cn.style==="animated-up"?"au":"";
+    let sw = cn.style==="animated-up"?0.8:cn.style==="dashed"?0.8:1.5;
+    let dash = cn.style==="dashed"?'stroke-dasharray="4 4"':"";
+    let g = `<g data-conn="${ci}" class="conn-g${isSel?' selected':''}" style="cursor:pointer">`;
+    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="transparent" stroke-width="14"/>`;
+    g += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="${c.stroke}" stroke-width="${isSel?3:sw}" class="${cls}" ${dash} opacity="${op}" marker-end="url(#m-${cn.color})"/>`;
     if (cn.label) {
-      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
-      g += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="var(--s2)" stroke="${isSel?'var(--green)':'var(--b1)'}" stroke-width="${isSel?1.5:0.5}"/>`;
-      g += `<text x="${mx}" y="${my+2}" fill="var(--ah)" font-size="8" text-anchor="middle">${cn.label}</text>`;
+      const mx=fx+(tx-fx)/2, my=fy+(ty-fy)/2;
+      g += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="#1c1c28" stroke="${isSel?'#639922':'#24243a'}" stroke-width="${isSel?1.5:.5}"/>`;
+      g += `<text x="${mx}" y="${my+2}" fill="#FAC775" font-size="8" text-anchor="middle">${cn.label}</text>`;
     }
     g += `</g>`;
-    svg.innerHTML += g;
+    layerHTML[cn.layer] += g;
   });
+
+  // Deal states (static decoration in deal layer)
+  let dealExtra = `<text x="30" y="378" fill="#1D9E75" font-size="9" letter-spacing=".06em" opacity=".5">DEAL STATES</text>`;
+  DEAL_STATES.forEach((s,i) => {
+    const w = s.label.length*7+16;
+    dealExtra += `<rect x="${s.x}" y="390" width="${w}" height="20" rx="10" fill="#0e3028" stroke="#1D9E75" stroke-width=".5"/>`;
+    dealExtra += `<text x="${s.x+w/2}" y="404" fill="#5DCAA5" font-size="9" text-anchor="middle" font-weight="500">${s.label}</text>`;
+    if (i<DEAL_STATES.length-1) {
+      const nx = DEAL_STATES[i+1].x;
+      dealExtra += `<line x1="${s.x+w}" y1="400" x2="${nx}" y2="400" stroke="#1D9E75" stroke-width=".4" opacity=".35" marker-end="url(#m-teal)"/>`;
+    }
+  });
+  dealExtra += `<rect x="200" y="434" width="104" height="20" rx="10" fill="#2c1810" stroke="#D85A30" stroke-width=".5"/>`;
+  dealExtra += `<text x="252" y="448" fill="#F0997B" font-size="8" text-anchor="middle" font-weight="500">Human review</text>`;
+  dealExtra += `<rect x="540" y="434" width="44" height="20" rx="10" fill="#1c1c28" stroke="#BA7517" stroke-width=".5"/>`;
+  dealExtra += `<text x="562" y="448" fill="#FAC775" font-size="8" text-anchor="middle" font-weight="500">Late</text>`;
+  dealExtra += `<rect x="614" y="434" width="66" height="20" rx="10" fill="#2c1810" stroke="#D85A30" stroke-width=".5"/>`;
+  dealExtra += `<text x="647" y="448" fill="#F0997B" font-size="8" text-anchor="middle" font-weight="500">Workout</text>`;
+  dealExtra += `<line x1="584" y1="444" x2="612" y2="444" stroke="#D85A30" stroke-width=".3" opacity=".4" marker-end="url(#m-coral)"/>`;
+  layerHTML.deal += dealExtra;
+
+  layerHTML.esc += `<rect x="840" y="148" width="236" height="30" rx="6" fill="#13131c" stroke="#D85A30" stroke-width=".5" opacity=".6"/>`;
+  layerHTML.esc += `<text x="858" y="162" fill="#F0997B" font-size="9" font-weight="500">Principle</text>`;
+  layerHTML.esc += `<text x="858" y="174" fill="#50506e" font-size="8">No human monitors. Agents detect, package, route.</text>`;
+
+  layerHTML.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="#13131c" stroke="#639922" stroke-width=".5" opacity=".5"/>`;
+  layerHTML.cash += `<text x="700" y="752" fill="#97C459" font-size="8" text-anchor="middle">$ Factor discount = revenue</text>`;
 
   // Nodes
+  let nodesHTML = "";
   NODES.forEach((n, ni) => {
     const c = COLORS[n.type];
-    const isSel = selectedNode === ni;
-    let g = `<g data-node="${ni}" class="edit-node-group ${isSel?'node-selected':''}">`;
-    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${isSel?'var(--green)':c.stroke}" stroke-width="${isSel?2:0.5}"/>`;
-    g += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${n.label}</text>`;
-    if (n.badge) g += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="var(--t3)" font-size="9">${n.badge}</text>`;
-    const lines = (n.sub||"").split("\n");
-    lines.forEach((l,i) => { g += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="var(--t3)" font-size="10">${l}</text>`; });
-    if (n.auth) g += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${n.auth}</text>`;
-    if (n.io) g += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${n.io}</text>`;
+    const isSel = selected && selected.type==='node' && selected.index===ni;
+    let g = `<g data-node="${ni}" class="node-g${isSel?' selected':''}">`;
+    if (isSel) {
+      g += `<rect class="sel-border" x="${n.x-1}" y="${n.y-1}" width="${n.w+2}" height="${n.h+2}" rx="7" fill="none" stroke="#639922" stroke-width="1.5"/>`;
+    }
+    g += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${isSel?'#639922':c.stroke}" stroke-width="${isSel?1.5:.5}"/>`;
+    g += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${esc(n.label)}</text>`;
+    if (n.badge) g += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="#50506e" font-size="9">${n.badge}</text>`;
+    (n.sub||"").split("\n").forEach((l,i) => { g += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="#50506e" font-size="10">${esc(l)}</text>`; });
+    if (n.auth) g += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${esc(n.auth)}</text>`;
+    if (n.io) g += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${esc(n.io)}</text>`;
     g += `</g>`;
-    svg.innerHTML += g;
+    nodesHTML += g;
   });
 
-  canvas.innerHTML = "";
-  canvas.appendChild(svg);
+  // Assemble layers
+  for (const k of ["deal","esc","data","cash"]) {
+    html += `<g class="lay${layers[k]?'':' off'}" id="l-${k}">${layerHTML[k]}</g>`;
+  }
+  html += nodesHTML;
 
-  // Attach event handlers
-  setupEditEvents(svg);
+  svg.innerHTML = html;
+  syncToggles();
+  updatePanel();
 }
 
-function svgPoint(svg, e) {
-  const pt = svg.createSVGPoint();
-  const rect = svg.getBoundingClientRect();
-  const vb = svg.viewBox.baseVal;
-  pt.x = (e.clientX - rect.left) / rect.width * vb.width;
-  pt.y = (e.clientY - rect.top) / rect.height * vb.height;
-  return pt;
+function updateViewBox() {
+  const svg = document.getElementById("canvas");
+  const vw = W / zoom, vh = H / zoom;
+  svg.setAttribute("viewBox", `${panX} ${panY} ${vw} ${vh}`);
+  document.getElementById("zoom-badge").textContent = Math.round(zoom * 100) + "%";
 }
 
-function setupEditEvents(svg) {
-  let dragging = false;
-  let dragNode = null;
-  let dragStart = null;
-  let origPos = null;
-  let dragG = null;
-  let hasDragged = false;
+function fitView() {
+  zoom = 1; panX = 0; panY = 0;
+  updateViewBox();
+}
 
-  svg.addEventListener("mousedown", e => {
-    const nodeG = e.target.closest("[data-node]");
-    const connG = e.target.closest("[data-conn]");
-
-    if (addingConn && nodeG) {
-      const ni = parseInt(nodeG.dataset.node);
-      if (connFromNode === null) {
-        connFromNode = ni;
-        nodeG.classList.add("node-selected");
-      } else {
-        if (connFromNode !== ni) {
-          CONNECTIONS.push({
-            from: NODES[connFromNode].id,
-            to: NODES[ni].id,
-            layer: "deal", color: "teal", style: "animated"
-          });
-          selectedConn = CONNECTIONS.length - 1;
-          selectedNode = null;
-          showConnForm(selectedConn);
-        }
-        addingConn = false;
-        connFromNode = null;
-        document.getElementById("add-conn-btn").classList.remove("active");
-        renderEditSVG();
-      }
-      return;
+// ============================================================
+// LAYER TOGGLES
+// ============================================================
+function syncToggles() {
+  for (const k in layers) {
+    const b = document.getElementById("t-"+k);
+    if (b) b.classList.toggle("on", layers[k]);
+    const l = document.getElementById("l-"+k);
+    if (l) l.classList.toggle("off", !layers[k]);
+    const zm = {esc:"z-esc",data:"z-data",cash:"z-cash"};
+    if (zm[k]) {
+      const el = document.getElementById(zm[k]);
+      if (el) el.classList.toggle("off", !layers[k]);
     }
+  }
+}
+function tog(k) { layers[k] = !layers[k]; syncToggles(); }
 
-    if (nodeG) {
-      const ni = parseInt(nodeG.dataset.node);
-      selectedNode = ni;
-      selectedConn = null;
-      closeForms();
-      dragging = true;
-      hasDragged = false;
-      dragNode = ni;
-      dragG = nodeG;
-      dragStart = svgPoint(svg, e);
-      origPos = {x: NODES[ni].x, y: NODES[ni].y};
-      // Highlight immediately without full re-render
-      svg.querySelectorAll(".node-selected").forEach(el => el.classList.remove("node-selected"));
-      nodeG.classList.add("node-selected");
-      const r = nodeG.querySelector("rect");
-      if (r) { r.setAttribute("stroke","var(--green)"); r.setAttribute("stroke-width","2"); }
-      e.preventDefault();
-    } else if (connG) {
-      const ci = parseInt(connG.dataset.conn);
-      selectedConn = ci;
-      selectedNode = null;
-      closeForms();
-      renderEditSVG();
-      e.preventDefault();
-    } else {
-      selectedNode = null;
-      selectedConn = null;
-      closeForms();
-      renderEditSVG();
+// ============================================================
+// EDIT MODE
+// ============================================================
+function toggleEdit() {
+  editing = !editing;
+  const wrap = document.getElementById("canvas-wrap");
+  wrap.classList.toggle("editing", editing);
+  document.getElementById("edit-toggle").classList.toggle("active", editing);
+  document.getElementById("mode-label").textContent = editing ? "edit" : "browse";
+  // Show/hide edit tools
+  const show = editing ? "" : "none";
+  document.getElementById("edit-tools").style.display = show;
+  document.getElementById("btn-add-node").style.display = show;
+  document.getElementById("btn-add-conn").style.display = show;
+  document.getElementById("btn-undo").style.display = show;
+  document.getElementById("btn-redo").style.display = show;
+  document.getElementById("cmd-sep").style.display = show;
+  if (!editing) {
+    selected = null;
+    addingConn = false; connFrom = null;
+    closePanel();
+    render();
+  }
+  updateHelpBar();
+}
+
+function updateHelpBar() {
+  const hb = document.getElementById("help-bar");
+  if (editing) {
+    hb.innerHTML = `<b>Click</b> select &nbsp; <b>Drag</b> move &nbsp; <b>Dbl-click</b> edit &nbsp; <b>Del</b> delete &nbsp; <b>⌘Z</b> undo &nbsp; <b>Esc</b> browse &nbsp; <b>⌘K</b> commands`;
+  } else {
+    hb.innerHTML = `<b>1-4</b> layers &nbsp; <b>A</b> all &nbsp; <b>0</b> none &nbsp; <b>E</b> edit &nbsp; <b>F</b> fit &nbsp; <b>⌘K</b> commands`;
+  }
+}
+
+// ============================================================
+// SIDE PANEL
+// ============================================================
+function openPanel(content) {
+  const panel = document.getElementById("panel");
+  panel.innerHTML = content;
+  panel.classList.add("open");
+}
+function closePanel() {
+  document.getElementById("panel").classList.remove("open");
+}
+
+function updatePanel() {
+  if (!selected || !editing) return;
+  if (selected.type === 'node') showNodePanel(selected.index);
+  else if (selected.type === 'conn') showConnPanel(selected.index);
+}
+
+function showNodePanel(ni) {
+  const n = NODES[ni];
+  const c = COLORS[n.type];
+  const chips = Object.keys(COLORS).map(k =>
+    `<div class="color-chip${n.type===k?' active':''}" style="background:${COLORS[k].fill};border-color:${n.type===k?COLORS[k].stroke:'transparent'};box-shadow:inset 0 0 0 1px ${COLORS[k].stroke}" data-type="${k}" onclick="setNodeType(${ni},'${k}')"></div>`
+  ).join("");
+  openPanel(`
+    <div class="ph"><span>Node</span><button onclick="closePanel()">×</button></div>
+    <div class="pg">
+      <label>Label</label>
+      <input value="${esc(n.label)}" oninput="updNode(${ni},'label',this.value)">
+      <label>Badge</label>
+      <input value="${esc(n.badge||'')}" placeholder="LLM, RULES..." oninput="updNode(${ni},'badge',this.value||undefined)">
+      <label>Description</label>
+      <textarea oninput="updNode(${ni},'sub',this.value)">${esc(n.sub||'')}</textarea>
+      <label>${n.type==='coral'?'Authority':'IO'}</label>
+      <input value="${esc(n.auth||n.io||'')}" oninput="updNodeExtra(${ni},this.value)">
+      <label>Type</label>
+      <div class="color-chips">${chips}</div>
+      <label>Position</label>
+      <div class="pos-row">
+        <input type="number" value="${n.x}" oninput="updNode(${ni},'x',+this.value)">
+        <input type="number" value="${n.y}" oninput="updNode(${ni},'y',+this.value)">
+      </div>
+      <label>Size</label>
+      <div class="pos-row">
+        <input type="number" value="${n.w}" oninput="updNode(${ni},'w',+this.value)">
+        <input type="number" value="${n.h}" oninput="updNode(${ni},'h',+this.value)">
+      </div>
+    </div>
+  `);
+}
+
+function updNode(ni, key, val) { NODES[ni][key] = val; render(); }
+function updNodeExtra(ni, val) {
+  const n = NODES[ni];
+  if (n.type==='coral') { n.auth=val; delete n.io; }
+  else if (n.type==='teal'||n.type==='purple') { n.io=val; delete n.auth; }
+  else { delete n.auth; delete n.io; }
+  render();
+}
+function setNodeType(ni, type) {
+  snapshot();
+  NODES[ni].type = type;
+  render();
+}
+
+function showConnPanel(ci) {
+  const cn = CONNECTIONS[ci];
+  const nodeOpts = k => NODES.map(n => `<option value="${n.id}" ${n.id===cn[k]?'selected':''}>${n.label}</option>`).join("");
+  openPanel(`
+    <div class="ph"><span>Connection</span><button onclick="closePanel()">×</button></div>
+    <div class="pg">
+      <label>From</label>
+      <select onchange="updConn(${ci},'from',this.value)">${nodeOpts('from')}</select>
+      <label>To</label>
+      <select onchange="updConn(${ci},'to',this.value)">${nodeOpts('to')}</select>
+      <label>Label</label>
+      <input value="${esc(cn.label||'')}" oninput="updConn(${ci},'label',this.value||undefined)">
+      <label>Layer</label>
+      <select onchange="updConn(${ci},'layer',this.value)">
+        <option value="deal" ${cn.layer==='deal'?'selected':''}>Deal flow</option>
+        <option value="esc" ${cn.layer==='esc'?'selected':''}>Escalation</option>
+        <option value="data" ${cn.layer==='data'?'selected':''}>Data flow</option>
+        <option value="cash" ${cn.layer==='cash'?'selected':''}>Cashflow</option>
+      </select>
+      <label>Color</label>
+      <div class="color-chips">
+        ${['teal','coral','purple','green'].map(k =>
+          `<div class="color-chip${cn.color===k?' active':''}" style="background:${COLORS[k].fill};box-shadow:inset 0 0 0 1px ${COLORS[k].stroke}" onclick="updConn(${ci},'color','${k}')"></div>`
+        ).join("")}
+      </div>
+      <label>Style</label>
+      <select onchange="updConn(${ci},'style',this.value)">
+        <option value="animated" ${cn.style==='animated'?'selected':''}>Animated</option>
+        <option value="animated-up" ${cn.style==='animated-up'?'selected':''}>Animated up</option>
+        <option value="dashed" ${cn.style==='dashed'?'selected':''}>Dashed</option>
+      </select>
+    </div>
+  `);
+}
+
+function updConn(ci, key, val) { CONNECTIONS[ci][key] = val; render(); }
+
+// ============================================================
+// CANVAS INTERACTIONS
+// ============================================================
+let dragging = null; // {ni, startPt, origX, origY, g}
+let panning = false, panStart = null, panOrigX, panOrigY;
+
+document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
+  if (e.target.closest("#panel")) return;
+  const svg = document.getElementById("canvas");
+  const nodeG = e.target.closest("[data-node]");
+  const connG = e.target.closest("[data-conn]");
+
+  closeCtx();
+
+  // Connection creation mode
+  if (addingConn && editing && nodeG) {
+    const ni = parseInt(nodeG.dataset.node);
+    if (connFrom === null) {
+      connFrom = ni;
+      selected = {type:'node', index:ni};
+      render();
+    } else if (connFrom !== ni) {
+      snapshot();
+      CONNECTIONS.push({from:NODES[connFrom].id, to:NODES[ni].id, layer:"deal", color:"teal", style:"animated"});
+      selected = {type:'conn', index:CONNECTIONS.length-1};
+      addingConn = false; connFrom = null;
+      document.getElementById("btn-add-conn").classList.remove("active");
+      render();
     }
-  });
-
-  svg.addEventListener("mousemove", e => {
-    if (!dragging || dragNode === null || !dragG) return;
-    hasDragged = true;
-    const pt = svgPoint(svg, e);
-    const dx = pt.x - dragStart.x;
-    const dy = pt.y - dragStart.y;
-    // Move visually with transform (no re-render)
-    dragG.setAttribute("transform", `translate(${dx},${dy})`);
-    e.preventDefault();
-  });
-
-  function endDrag() {
-    if (!dragging || dragNode === null) return;
-    if (hasDragged && dragG) {
-      const t = dragG.getAttribute("transform");
-      if (t) {
-        const m = t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
-        if (m) {
-          NODES[dragNode].x = Math.round(origPos.x + parseFloat(m[1]));
-          NODES[dragNode].y = Math.round(origPos.y + parseFloat(m[2]));
-        }
-      }
-      renderEditSVG();
-    }
-    dragging = false;
-    dragNode = null;
-    dragG = null;
+    return;
   }
 
-  svg.addEventListener("mouseup", endDrag);
-  svg.addEventListener("mouseleave", endDrag);
-
-  svg.addEventListener("dblclick", e => {
-    const nodeG = e.target.closest("[data-node]");
-    const connG = e.target.closest("[data-conn]");
-    if (nodeG) {
-      const ni = parseInt(nodeG.dataset.node);
-      selectedNode = ni;
-      selectedConn = null;
-      renderEditSVG();
-      showNodeForm(ni);
-    } else if (connG) {
-      const ci = parseInt(connG.dataset.conn);
-      selectedConn = ci;
-      selectedNode = null;
-      renderEditSVG();
-      // Inline label edit: show a positioned text input over the label
-      const cn = CONNECTIONS[ci];
-      const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
-      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
-      showInlineLabelEdit(ci, mx, my, svg);
+  if (editing && nodeG) {
+    const ni = parseInt(nodeG.dataset.node);
+    selected = {type:'node', index:ni};
+    const pt = svgPt(e);
+    dragging = {ni, startPt:pt, origX:NODES[ni].x, origY:NODES[ni].y, g:nodeG, moved:false};
+    render();
+    // Re-grab the group after render
+    dragging.g = svg.querySelector(`[data-node="${ni}"]`);
+    e.preventDefault();
+  } else if (editing && connG) {
+    selected = {type:'conn', index:parseInt(connG.dataset.conn)};
+    render();
+    e.preventDefault();
+  } else if (nodeG && !editing) {
+    // Browse mode: select for info
+    selected = {type:'node', index:parseInt(nodeG.dataset.node)};
+    render();
+  } else if (!nodeG && !connG) {
+    // Pan or deselect
+    if (e.button === 0 && !e.target.closest("#panel")) {
+      if (selected) { selected = null; closePanel(); render(); }
+      panning = true;
+      panStart = {x:e.clientX, y:e.clientY};
+      panOrigX = panX; panOrigY = panY;
+      document.getElementById("canvas-wrap").classList.add("panning");
     }
-  });
-}
+  }
+});
 
-function showNodeForm(ni) {
-  const n = NODES[ni];
-  const form = document.getElementById("node-form");
-  form.innerHTML = `
-    <label>Label</label>
-    <input id="nf-label" value="${esc(n.label)}">
-    <label>Badge</label>
-    <input id="nf-badge" value="${esc(n.badge||'')}" placeholder="e.g. LLM, RULES">
-    <label>Description (\\n for newlines)</label>
-    <textarea id="nf-sub">${esc(n.sub||'')}</textarea>
-    <label>Authority / IO</label>
-    <input id="nf-extra" value="${esc(n.auth||n.io||'')}">
-    <label>Type</label>
-    <select id="nf-type">
-      <option value="coral" ${n.type==='coral'?'selected':''}>Coral (Human)</option>
-      <option value="teal" ${n.type==='teal'?'selected':''}>Teal (Engine)</option>
-      <option value="purple" ${n.type==='purple'?'selected':''}>Purple (Agent)</option>
-      <option value="gray" ${n.type==='gray'?'selected':''}>Gray (Infra)</option>
-      <option value="green" ${n.type==='green'?'selected':''}>Green (External)</option>
-    </select>
-    <label>Size (W x H)</label>
-    <div style="display:flex;gap:6px">
-      <input id="nf-w" type="number" value="${n.w}" style="width:50%">
-      <input id="nf-h" type="number" value="${n.h}" style="width:50%">
-    </div>
-    <div class="form-actions">
-      <button onclick="closeForms()">Cancel</button>
-      <button class="save" onclick="saveNode(${ni})">Save</button>
-    </div>`;
-  form.style.left = "50%";
-  form.style.top = "50%";
-  form.style.transform = "translate(-50%,-50%)";
-  form.classList.add("visible");
-}
+document.addEventListener("mousemove", e => {
+  if (dragging) {
+    const pt = svgPt(e);
+    const dx = pt.x - dragging.startPt.x;
+    const dy = pt.y - dragging.startPt.y;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragging.moved = true;
+    if (dragging.moved && dragging.g) {
+      dragging.g.setAttribute("transform", `translate(${dx},${dy})`);
+    }
+    e.preventDefault();
+  }
+  if (panning && panStart) {
+    const svg = document.getElementById("canvas");
+    const r = svg.getBoundingClientRect();
+    const vw = W / zoom, vh = H / zoom;
+    const dx = (e.clientX - panStart.x) / r.width * vw;
+    const dy = (e.clientY - panStart.y) / r.height * vh;
+    panX = panOrigX - dx;
+    panY = panOrigY - dy;
+    updateViewBox();
+  }
+});
 
-function saveNode(ni) {
-  const n = NODES[ni];
-  n.label = document.getElementById("nf-label").value;
-  n.badge = document.getElementById("nf-badge").value || undefined;
-  n.sub = document.getElementById("nf-sub").value;
-  const extra = document.getElementById("nf-extra").value;
-  const oldType = n.type;
-  n.type = document.getElementById("nf-type").value;
-  n.w = parseInt(document.getElementById("nf-w").value) || n.w;
-  n.h = parseInt(document.getElementById("nf-h").value) || n.h;
-  // Assign to auth or io based on type
-  if (n.type === "coral") { n.auth = extra; delete n.io; }
-  else if (n.type === "teal" || n.type === "purple") { n.io = extra; delete n.auth; }
-  else { delete n.auth; delete n.io; }
-  closeForms();
-  renderEditSVG();
-}
+document.addEventListener("mouseup", e => {
+  if (dragging) {
+    if (dragging.moved) {
+      snapshot();
+      const pt = svgPt(e);
+      const dx = pt.x - dragging.startPt.x;
+      const dy = pt.y - dragging.startPt.y;
+      NODES[dragging.ni].x = Math.round(dragging.origX + dx);
+      NODES[dragging.ni].y = Math.round(dragging.origY + dy);
+      render();
+    }
+    dragging = null;
+  }
+  if (panning) {
+    panning = false;
+    panStart = null;
+    document.getElementById("canvas-wrap").classList.remove("panning");
+  }
+});
 
-function showConnForm(ci) {
+// Double-click
+document.getElementById("canvas-wrap").addEventListener("dblclick", e => {
+  if (!editing) { toggleEdit(); return; }
+  const nodeG = e.target.closest("[data-node]");
+  const connG = e.target.closest("[data-conn]");
+  if (nodeG) {
+    const ni = parseInt(nodeG.dataset.node);
+    selected = {type:'node', index:ni};
+    render();
+  } else if (connG) {
+    const ci = parseInt(connG.dataset.conn);
+    selected = {type:'conn', index:ci};
+    render();
+    // Inline label edit
+    const cn = CONNECTIONS[ci];
+    const {fx,fy,tx,ty} = connPts(cn.from, cn.to);
+    const mx = fx+(tx-fx)/2, my = fy+(ty-fy)/2;
+    inlineEdit(ci, mx, my);
+  }
+});
+
+// Zoom
+document.getElementById("canvas-wrap").addEventListener("wheel", e => {
+  e.preventDefault();
+  const pt = svgPt(e);
+  const oldZoom = zoom;
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  zoom = Math.max(0.3, Math.min(4, zoom * delta));
+  // Zoom toward cursor
+  panX = pt.x - (pt.x - panX) * (oldZoom / zoom);
+  panY = pt.y - (pt.y - panY) * (oldZoom / zoom);
+  updateViewBox();
+}, {passive:false});
+
+// ============================================================
+// INLINE LABEL EDIT
+// ============================================================
+function inlineEdit(ci, svgX, svgY) {
+  const old = document.getElementById("inline-edit");
+  if (old) old.remove();
   const cn = CONNECTIONS[ci];
-  const form = document.getElementById("conn-form");
-  const nodeOpts = NODES.map((n,i) => `<option value="${n.id}" ${n.id===cn.from?'selected':''}>${n.label}</option>`).join("");
-  const nodeOpts2 = NODES.map((n,i) => `<option value="${n.id}" ${n.id===cn.to?'selected':''}>${n.label}</option>`).join("");
-  form.innerHTML = `
-    <label>From</label>
-    <select id="cf-from">${nodeOpts}</select>
-    <label>To</label>
-    <select id="cf-to">${nodeOpts2}</select>
-    <label>Layer</label>
-    <select id="cf-layer">
-      <option value="deal" ${cn.layer==='deal'?'selected':''}>Deal flow</option>
-      <option value="esc" ${cn.layer==='esc'?'selected':''}>Escalation</option>
-      <option value="data" ${cn.layer==='data'?'selected':''}>Data flow</option>
-      <option value="cash" ${cn.layer==='cash'?'selected':''}>Cashflow</option>
-    </select>
-    <label>Color</label>
-    <select id="cf-color">
-      <option value="teal" ${cn.color==='teal'?'selected':''}>Teal</option>
-      <option value="coral" ${cn.color==='coral'?'selected':''}>Coral</option>
-      <option value="purple" ${cn.color==='purple'?'selected':''}>Purple</option>
-      <option value="green" ${cn.color==='green'?'selected':''}>Green</option>
-    </select>
-    <label>Style</label>
-    <select id="cf-style">
-      <option value="animated" ${cn.style==='animated'?'selected':''}>Animated</option>
-      <option value="animated-up" ${cn.style==='animated-up'?'selected':''}>Animated (up)</option>
-      <option value="dashed" ${cn.style==='dashed'?'selected':''}>Dashed</option>
-    </select>
-    <label>Label</label>
-    <input id="cf-label" value="${esc(cn.label||'')}">
-    <div class="form-actions">
-      <button onclick="closeForms()">Cancel</button>
-      <button class="save" onclick="saveConn(${ci})">Save</button>
-    </div>`;
-  form.style.left = "50%";
-  form.style.top = "50%";
-  form.style.transform = "translate(-50%,-50%)";
-  form.classList.add("visible");
+  const svg = document.getElementById("canvas");
+  const r = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const sx = r.left + ((svgX - vb.x) / vb.width) * r.width;
+  const sy = r.top + ((svgY - vb.y) / vb.height) * r.height;
+  const wrap = document.getElementById("canvas-wrap");
+  const wr = wrap.getBoundingClientRect();
+
+  const input = document.createElement("input");
+  input.id = "inline-edit";
+  input.value = cn.label || "";
+  input.placeholder = "Label...";
+  input.style.cssText = `position:absolute;z-index:25;left:${sx-wr.left-80}px;top:${sy-wr.top-12}px;
+    width:160px;padding:5px 8px;border-radius:6px;border:1px solid #639922;
+    background:#13131c;color:#e0e0ea;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    text-align:center;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
+  function commit() { snapshot(); cn.label = input.value||undefined; input.remove(); render(); }
+  input.addEventListener("keydown", e => { if(e.key==="Enter")commit(); if(e.key==="Escape"){input.remove();} e.stopPropagation(); });
+  input.addEventListener("blur", commit);
+  wrap.appendChild(input);
+  input.focus(); input.select();
 }
 
-function saveConn(ci) {
-  const cn = CONNECTIONS[ci];
-  cn.from = document.getElementById("cf-from").value;
-  cn.to = document.getElementById("cf-to").value;
-  cn.layer = document.getElementById("cf-layer").value;
-  cn.color = document.getElementById("cf-color").value;
-  cn.style = document.getElementById("cf-style").value;
-  cn.label = document.getElementById("cf-label").value || undefined;
-  closeForms();
-  renderEditSVG();
-}
-
-function esc(s) { return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
-
+// ============================================================
+// ACTIONS
+// ============================================================
 function addNode() {
-  const id = "node_" + Date.now();
-  NODES.push({id, label:"New Node", sub:"Description", type:"gray", x:500, y:400, w:200, h:60});
-  selectedNode = NODES.length - 1;
-  selectedConn = null;
-  renderEditSVG();
-  showNodeForm(selectedNode);
+  snapshot();
+  const cx = panX + W/zoom/2 - 100, cy = panY + H/zoom/2 - 30;
+  NODES.push({id:"n_"+Date.now(), label:"New Node", sub:"Description", type:"gray", x:Math.round(cx), y:Math.round(cy), w:200, h:60});
+  selected = {type:'node', index:NODES.length-1};
+  render();
 }
 
 function startAddConn() {
   addingConn = !addingConn;
-  connFromNode = null;
-  document.getElementById("add-conn-btn").classList.toggle("active", addingConn);
-  if (addingConn) {
-    selectedNode = null;
-    selectedConn = null;
-    closeForms();
-  }
+  connFrom = null;
+  document.getElementById("btn-add-conn").classList.toggle("active", addingConn);
 }
 
 function deleteSelected() {
-  if (selectedNode !== null) {
-    const nodeId = NODES[selectedNode].id;
-    NODES.splice(selectedNode, 1);
-    // Remove connections referencing this node
-    for (let i = CONNECTIONS.length - 1; i >= 0; i--) {
-      if (CONNECTIONS[i].from === nodeId || CONNECTIONS[i].to === nodeId) {
-        CONNECTIONS.splice(i, 1);
-      }
+  if (!selected) return;
+  snapshot();
+  if (selected.type === 'node') {
+    const id = NODES[selected.index].id;
+    NODES.splice(selected.index, 1);
+    for (let i=CONNECTIONS.length-1;i>=0;i--) {
+      if (CONNECTIONS[i].from===id||CONNECTIONS[i].to===id) CONNECTIONS.splice(i,1);
     }
-    selectedNode = null;
-    closeForms();
-    renderEditSVG();
-  } else if (selectedConn !== null) {
-    CONNECTIONS.splice(selectedConn, 1);
-    selectedConn = null;
-    closeForms();
-    renderEditSVG();
+  } else {
+    CONNECTIONS.splice(selected.index, 1);
   }
+  selected = null; closePanel(); render();
+}
+
+function duplicateNode() {
+  if (!selected || selected.type!=='node') return;
+  snapshot();
+  const src = NODES[selected.index];
+  const n = JSON.parse(JSON.stringify(src));
+  n.id = "n_"+Date.now();
+  n.x += 20; n.y += 20;
+  NODES.push(n);
+  selected = {type:'node', index:NODES.length-1};
+  render();
 }
 
 // ============================================================
-// KEYBOARD SHORTCUTS
+// CONTEXT MENU
+// ============================================================
+function closeCtx() { document.getElementById("ctx-menu").classList.remove("visible"); }
+
+document.getElementById("canvas-wrap").addEventListener("contextmenu", e => {
+  if (e.target.closest("#panel")) return;
+  e.preventDefault();
+  const nodeG = e.target.closest("[data-node]");
+  const connG = e.target.closest("[data-conn]");
+  const menu = document.getElementById("ctx-menu");
+  let html = "";
+
+  if (nodeG && editing) {
+    const ni = parseInt(nodeG.dataset.node);
+    selected = {type:'node', index:ni}; render();
+    html = `
+      <button onclick="closeCtx();showNodePanel(${ni})">Edit properties<span class="shortcut">Dbl-click</span></button>
+      <button onclick="closeCtx();duplicateNode()">Duplicate<span class="shortcut">⌘D</span></button>
+      <div class="ctx-sep"></div>
+      <button class="danger" onclick="closeCtx();deleteSelected()">Delete<span class="shortcut">⌫</span></button>`;
+  } else if (connG && editing) {
+    const ci = parseInt(connG.dataset.conn);
+    selected = {type:'conn', index:ci}; render();
+    const cn = CONNECTIONS[ci];
+    const {fx,fy,tx,ty} = connPts(cn.from, cn.to);
+    const mx=fx+(tx-fx)/2, my=fy+(ty-fy)/2;
+    html = `
+      <button onclick="closeCtx();inlineEdit(${ci},${mx},${my})">Edit label</button>
+      <button onclick="closeCtx();showConnPanel(${ci})">Properties</button>
+      <div class="ctx-sep"></div>
+      <button class="danger" onclick="closeCtx();deleteSelected()">Delete<span class="shortcut">⌫</span></button>`;
+  } else if (editing) {
+    html = `
+      <button onclick="closeCtx();addNode()">Add node<span class="shortcut">N</span></button>
+      <button onclick="closeCtx();startAddConn()">Add connection</button>
+      <div class="ctx-sep"></div>
+      <button onclick="closeCtx();fitView()">Fit view<span class="shortcut">F</span></button>`;
+  } else {
+    html = `
+      <button onclick="closeCtx();toggleEdit()">Enter edit mode<span class="shortcut">E</span></button>
+      <div class="ctx-sep"></div>
+      <button onclick="closeCtx();fitView()">Fit view<span class="shortcut">F</span></button>`;
+  }
+  menu.innerHTML = html;
+  menu.style.left = e.clientX + "px";
+  menu.style.top = e.clientY + "px";
+  menu.classList.add("visible");
+});
+
+document.addEventListener("click", e => { if (!e.target.closest("#ctx-menu")) closeCtx(); });
+
+// ============================================================
+// COMMAND PALETTE
+// ============================================================
+const COMMANDS = [
+  {name:"Toggle deal flow", key:"1", fn:()=>tog('deal')},
+  {name:"Toggle escalation", key:"2", fn:()=>tog('esc')},
+  {name:"Toggle data flow", key:"3", fn:()=>tog('data')},
+  {name:"Toggle cashflow", key:"4", fn:()=>tog('cash')},
+  {name:"Show all layers", key:"A", fn:()=>{layers.deal=layers.esc=layers.data=layers.cash=true;syncToggles()}},
+  {name:"Hide all layers", key:"0", fn:()=>{layers.deal=layers.esc=layers.data=layers.cash=false;syncToggles()}},
+  {name:"Toggle edit mode", key:"E", fn:toggleEdit},
+  {name:"Fit view", key:"F", fn:fitView},
+  {name:"Add node", key:"N", fn:()=>{if(!editing)toggleEdit();addNode()}},
+  {name:"Delete selected", key:"⌫", fn:deleteSelected},
+  {name:"Duplicate node", key:"⌘D", fn:duplicateNode},
+  {name:"Undo", key:"⌘Z", fn:undo},
+  {name:"Redo", key:"⌘⇧Z", fn:redo},
+];
+
+let cmdActive = -1;
+function openCmd() {
+  const pal = document.getElementById("cmd-palette");
+  pal.classList.add("visible");
+  const input = document.getElementById("cmd-input");
+  input.value = "";
+  cmdActive = -1;
+  renderCmdResults("");
+  setTimeout(() => input.focus(), 50);
+}
+function closeCmd() {
+  document.getElementById("cmd-palette").classList.remove("visible");
+}
+function renderCmdResults(q) {
+  const results = document.getElementById("cmd-results");
+  const filtered = q ? COMMANDS.filter(c => c.name.toLowerCase().includes(q.toLowerCase())) : COMMANDS;
+  results.innerHTML = filtered.map((c,i) =>
+    `<button data-ci="${i}" class="${i===cmdActive?'active':''}" onclick="runCmd(${COMMANDS.indexOf(c)})">`+
+    `<span class="cmd-icon">›</span>${c.name}<span class="cmd-key">${c.key}</span></button>`
+  ).join("");
+}
+function runCmd(i) { closeCmd(); COMMANDS[i].fn(); }
+
+document.getElementById("cmd-input").addEventListener("input", e => {
+  cmdActive = -1;
+  renderCmdResults(e.target.value);
+});
+document.getElementById("cmd-input").addEventListener("keydown", e => {
+  const btns = document.querySelectorAll("#cmd-results button");
+  if (e.key === "ArrowDown") { cmdActive = Math.min(cmdActive+1, btns.length-1); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { cmdActive = Math.max(cmdActive-1, 0); e.preventDefault(); }
+  else if (e.key === "Enter" && btns[cmdActive]) { btns[cmdActive].click(); return; }
+  else if (e.key === "Escape") { closeCmd(); return; }
+  else return;
+  btns.forEach((b,i) => b.classList.toggle("active", i===cmdActive));
+});
+document.getElementById("cmd-palette").addEventListener("click", e => {
+  if (e.target === document.getElementById("cmd-palette")) closeCmd();
+});
+
+// ============================================================
+// KEYBOARD
 // ============================================================
 document.addEventListener("keydown", e => {
-  if (editActive) {
-    if (e.key === "Escape") { closeForms(); addingConn=false; connFromNode=null; document.getElementById("add-conn-btn").classList.remove("active"); }
-    if ((e.key === "Delete" || e.key === "Backspace") && !e.target.closest("input,textarea,select")) deleteSelected();
-    return;
+  if (document.getElementById("cmd-palette").classList.contains("visible")) return;
+  if (e.target.closest("input,textarea,select")) return;
+
+  // Cmd+K
+  if ((e.metaKey||e.ctrlKey) && e.key==="k") { e.preventDefault(); openCmd(); return; }
+  // Cmd+Z
+  if ((e.metaKey||e.ctrlKey) && e.key==="z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if ((e.metaKey||e.ctrlKey) && e.key==="z" && e.shiftKey) { e.preventDefault(); redo(); return; }
+  // Cmd+D
+  if ((e.metaKey||e.ctrlKey) && e.key==="d") { e.preventDefault(); duplicateNode(); return; }
+
+  if (editing) {
+    if (e.key==="Escape") { if (addingConn) { addingConn=false; connFrom=null; document.getElementById("btn-add-conn").classList.remove("active"); } else { toggleEdit(); } }
+    if (e.key==="Delete"||e.key==="Backspace") deleteSelected();
+    if (e.key.toLowerCase()==="n") addNode();
+  } else {
+    if (e.key==="1") tog('deal');
+    if (e.key==="2") tog('esc');
+    if (e.key==="3") tog('data');
+    if (e.key==="4") tog('cash');
+    if (e.key.toLowerCase()==="a") { layers.deal=layers.esc=layers.data=layers.cash=true; syncToggles(); }
+    if (e.key==="0") { layers.deal=layers.esc=layers.data=layers.cash=false; syncToggles(); }
+    if (e.key.toLowerCase()==="e") toggleEdit();
   }
-  if (e.key==="1"){st.deal=!st.deal;sync()}
-  if (e.key==="2"){st.esc=!st.esc;sync()}
-  if (e.key==="3"){st.data=!st.data;sync()}
-  if (e.key==="4"){st.cash=!st.cash;sync()}
-  if (e.key.toLowerCase()==="a"){st.deal=st.esc=st.data=st.cash=true;sync()}
-  if (e.key==="0"){st.deal=st.esc=st.data=st.cash=false;sync()}
-  if (e.key.toLowerCase()==="e") enterEdit();
+  if (e.key.toLowerCase()==="f" && !e.metaKey && !e.ctrlKey) fitView();
 });
 
 // ============================================================
 // INIT
 // ============================================================
-renderSVG();
-sync();
+render();
 </script>
 </body>
 </html>
