@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Org Architecture — Factoring Co</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
+:root {
+  --bg:#0b0b12;--s1:#13131c;--s2:#1c1c28;
+  --b1:#24243a;--b2:#36364e;
+  --t1:#e0e0ea;--t2:#8e8ea8;--t3:#50506e;
+  --teal:#1D9E75;--tl:#0e3028;--th:#5DCAA5;
+  --purple:#7F77DD;--pl:#1e1840;--ph:#AFA9EC;
+  --coral:#D85A30;--cl:#2c1810;--ch:#F0997B;
+  --amber:#BA7517;--ah:#FAC775;
+  --green:#639922;--gnl:#152e08;--gnh:#97C459;
+  --gl:#1a1a26;--gm:#40405a;--gh:#9898aa;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
+.grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
+  background-image:linear-gradient(rgba(100,100,140,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(100,100,140,.06) 1px,transparent 1px);background-size:48px 48px}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
+  padding:10px 24px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);flex-shrink:0;backdrop-filter:blur(8px)}
+header h1{font-size:14px;font-weight:500}
+header h1 span{color:var(--t3);font-weight:400}
+.controls{display:flex;gap:3px;align-items:center}
+.tog{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px 4px 7px;border-radius:6px;
+  border:1px solid var(--b1);background:0;color:var(--t3);cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:5px;user-select:none}
+.tog:hover{border-color:var(--b2);color:var(--t2)}
+.tog .d{width:7px;height:7px;border-radius:50%;opacity:.25;transition:opacity .2s}
+.tog.on{border-color:var(--b2);color:var(--t1)}
+.tog.on .d{opacity:1}
+.tog .k{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:3px;border:1px solid var(--b1);font-size:9px;color:var(--t3);margin-left:2px}
+.sep{width:1px;height:20px;background:var(--b1);margin:0 6px}
+.edit-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 12px;border-radius:6px;
+  border:1px solid var(--green);background:var(--gnl);color:var(--gnh);cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:5px}
+.edit-btn:hover{background:var(--green);color:#fff}
+.edit-btn.loading{opacity:.5;pointer-events:none}
+#view-mode{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:4px 12px;min-height:0}
+#view-mode svg{width:100%;height:100%;max-width:1400px;max-height:calc(100vh - 48px)}
+svg text{font-family:'IBM Plex Mono',monospace}
+.lay{transition:opacity .3s ease}
+.lay.off{opacity:0;pointer-events:none}
+.zbg{transition:opacity .3s ease}
+.zbg.off{opacity:0}
+@keyframes fr{to{stroke-dashoffset:-24}}
+@keyframes fu{to{stroke-dashoffset:-16}}
+@keyframes fc{to{stroke-dashoffset:-18}}
+.ar{stroke-dasharray:8 6;animation:fr 1.2s linear infinite}
+.au{stroke-dasharray:5 4;animation:fu 1.6s linear infinite}
+.ac{stroke-dasharray:6 5;animation:fc 1s linear infinite}
+.help{position:fixed;bottom:8px;left:24px;z-index:10;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t3)}
+.help b{color:var(--t2)}
+#edit-mode{display:none;flex:1;position:relative;z-index:2}
+#edit-mode.active{display:flex}
+#view-mode.hidden{display:none}
+.help.hidden{display:none}
+#excalidraw-container{flex:1;width:100%;height:100%}
+.loading-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--t2);flex-direction:column;gap:8px}
+.loading-msg .spinner{width:24px;height:24px;border:2px solid var(--b2);border-top-color:var(--green);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+<header>
+  <h1>Org architecture <span>— rent receivable factoring</span></h1>
+  <div class="controls">
+    <div class="toggles" id="toggles">
+      <button class="tog on" id="t-deal" onclick="tog('deal')"><span class="d" style="background:var(--teal)"></span>Deal flow<span class="k">1</span></button>
+      <button class="tog" id="t-esc" onclick="tog('esc')"><span class="d" style="background:var(--coral)"></span>Escalation<span class="k">2</span></button>
+      <button class="tog" id="t-data" onclick="tog('data')"><span class="d" style="background:var(--purple)"></span>Data flow<span class="k">3</span></button>
+      <button class="tog" id="t-cash" onclick="tog('cash')"><span class="d" style="background:var(--green)"></span>Cashflow<span class="k">4</span></button>
+    </div>
+    <div class="sep"></div>
+    <button class="edit-btn" id="edit-btn" onclick="enterEdit()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit layout
+    </button>
+  </div>
+</header>
+
+<div id="view-mode">
+<!-- SVG is identical to previous version - generated from data on load -->
+</div>
+
+<div id="edit-mode">
+  <div class="loading-msg" id="loading-msg">
+    <div class="spinner"></div>
+    Loading Excalidraw editor...
+  </div>
+  <div id="excalidraw-container"></div>
+</div>
+
+<div class="help" id="help-bar"><b>1</b> deal &nbsp; <b>2</b> escalation &nbsp; <b>3</b> data &nbsp; <b>4</b> cashflow &nbsp; <b>A</b> all &nbsp; <b>0</b> nodes only &nbsp; <b>E</b> edit</div>
+
+<script>
+// ============================================================
+// DATA MODEL — single source of truth for both views
+// ============================================================
+const NODES = [
+  // Humans
+  {id:"ceo", label:"CEO / Partnerships", sub:"PM acquisition · pricing · workouts\nInvestor relations · strategic direction", auth:"pricing, PM terms, write-offs", row:"human", type:"coral", x:60, y:74, w:310, h:100},
+  {id:"credit", label:"Head of Credit", sub:"Underwriting policy · risk thresholds · exceptions\nPortfolio monitoring · concentration limits", auth:"approve/decline, limits, UW policy", row:"human", type:"coral", x:410, y:74, w:340, h:100},
+  {id:"eng", label:"Head of Eng / Ops", sub:"Platform · agent orchestration\nPM integrations · compliance infra", auth:"system changes, deployments", row:"human", type:"coral", x:790, y:74, w:300, h:100},
+  // Processing
+  {id:"intake", label:"Intake Agent", badge:"LLM", sub:"Reads bids, leases, rent rolls\nExtracts structured deal data", io:"IN: PM docs → OUT: deal record", row:"agent", type:"purple", x:30, y:282, w:242, h:84},
+  {id:"scoring", label:"Scoring Engine", badge:"RULES", sub:"Rent coverage · lease term · LTV\nPM track record · concentration", io:"IN: deal record → OUT: decision", row:"agent", type:"teal", x:306, y:282, w:242, h:84},
+  {id:"servicing", label:"Servicing Engine", badge:"RULES", sub:"Rent-split calc · ACH · reconcile\nPayment tracking · UCC lifecycle", io:"IN: funded deal → OUT: payments", row:"agent", type:"teal", x:582, y:282, w:242, h:84},
+  {id:"comms", label:"Comms Agent", badge:"LLM", sub:"PM status · payment confirms\nSupport triage · collections", io:"IN: events → OUT: messages", row:"agent", type:"purple", x:858, y:282, w:242, h:84},
+  // Infra
+  {id:"pm_adapt", label:"PM Platform Adapters", sub:"AppFolio · Buildium · Rentvine\nNormalized schema", row:"infra", type:"gray", x:30, y:560, w:240, h:72},
+  {id:"ledger", label:"Deal Ledger", sub:"State · payments · UCC status\nTrue-sale audit trail", row:"infra", type:"gray", x:300, y:560, w:240, h:72},
+  {id:"column", label:"Column Bank", sub:"ACH origination · receipt\nFBO accounts · ledger", row:"infra", type:"green", x:570, y:560, w:240, h:72},
+  {id:"kb", label:"Knowledge Base", sub:"UW policy · PM profiles\nCompliance · templates", row:"infra", type:"gray", x:840, y:560, w:240, h:72},
+  // Cashflow externals
+  {id:"facility", label:"Credit Facility", sub:"Warehouse line", row:"cashflow", type:"green", x:50, y:684, w:160, h:44},
+  {id:"contractor", label:"Contractor / PM", sub:"Receives repair funds", row:"cashflow", type:"green", x:1060, y:684, w:170, h:44},
+];
+
+const CONNECTIONS = [
+  // Deal flow
+  {from:"intake", to:"scoring", layer:"deal", color:"teal", style:"animated"},
+  {from:"scoring", to:"servicing", layer:"deal", color:"teal", style:"animated"},
+  {from:"servicing", to:"comms", layer:"deal", color:"teal", style:"animated"},
+  // Escalation
+  {from:"scoring", to:"credit", layer:"esc", color:"coral", style:"dashed", label:"gray zone · >$25k"},
+  {from:"servicing", to:"credit", layer:"esc", color:"coral", style:"dashed", label:"vacancy · 30d+ late"},
+  {from:"comms", to:"ceo", layer:"esc", color:"coral", style:"dashed", label:"PM dispute"},
+  // Data flow
+  {from:"pm_adapt", to:"intake", layer:"data", color:"purple", style:"animated-up"},
+  {from:"ledger", to:"scoring", layer:"data", color:"purple", style:"animated-up"},
+  {from:"ledger", to:"servicing", layer:"data", color:"purple", style:"animated-up"},
+  {from:"kb", to:"comms", layer:"data", color:"purple", style:"animated-up"},
+  {from:"kb", to:"scoring", layer:"data", color:"purple", style:"animated-up", opacity:.35},
+  {from:"pm_adapt", to:"servicing", layer:"data", color:"purple", style:"animated-up", opacity:.35, label:"occupancy polls"},
+  // Cashflow
+  {from:"facility", to:"column", layer:"cash", color:"green", style:"animated", label:"$ Facility draw"},
+  {from:"column", to:"contractor", layer:"cash", color:"green", style:"animated", label:"$ Disbursement"},
+  {from:"servicing", to:"column", layer:"cash", color:"green", style:"dashed", label:"ACH instructions"},
+];
+
+const DEAL_STATES = [
+  {label:"Received", x:46},
+  {label:"Scoring", x:164},
+  {label:"Approved", x:274},
+  {label:"Funded", x:394},
+  {label:"Active", x:502},
+  {label:"Closed", x:700},
+];
+
+// ============================================================
+// SVG OVERLAY VIEW RENDERER
+// ============================================================
+const COLORS = {
+  coral: {fill:"var(--cl)", stroke:"var(--coral)", title:"var(--ch)", auth:"var(--coral)"},
+  teal: {fill:"var(--tl)", stroke:"var(--teal)", title:"var(--th)", io:"var(--teal)"},
+  purple: {fill:"var(--pl)", stroke:"var(--purple)", title:"var(--ph)", io:"var(--purple)"},
+  gray: {fill:"var(--gl)", stroke:"var(--gm)", title:"var(--gh)"},
+  green: {fill:"var(--gnl)", stroke:"var(--green)", title:"var(--gnh)"},
+};
+
+function getNodeCenter(id) {
+  const n = NODES.find(n => n.id === id);
+  return {x: n.x + n.w/2, y: n.y + n.h/2, top: n.y, bot: n.y+n.h, left: n.x, right: n.x+n.w};
+}
+
+function connectorPoints(fromId, toId) {
+  const f = getNodeCenter(fromId), t = getNodeCenter(toId);
+  let fx,fy,tx,ty;
+  if (t.top > f.bot + 20) { fx=f.x; fy=f.bot; tx=t.x; ty=t.top; }
+  else if (f.top > t.bot + 20) { fx=f.x; fy=f.top; tx=t.x; ty=t.bot; }
+  else { fx=f.right; fy=f.y; tx=t.left; ty=t.y; }
+  return {fx,fy,tx,ty};
+}
+
+function renderSVG() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 1280 760");
+  svg.innerHTML = `<defs>
+    <marker id="at" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="acl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--coral)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--purple)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="agn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  </defs>`;
+
+  // Zone bgs
+  svg.innerHTML += `<rect class="zbg" id="z-esc" x="0" y="134" width="1280" height="112" fill="var(--coral)" opacity=".015"/>`;
+  svg.innerHTML += `<rect class="zbg off" id="z-data" x="0" y="472" width="1280" height="82" fill="var(--purple)" opacity=".018"/>`;
+  svg.innerHTML += `<rect class="zbg off" id="z-cash" x="0" y="670" width="1280" height="86" fill="var(--green)" opacity=".02"/>`;
+
+  // Row labels
+  svg.innerHTML += `<text x="30" y="28" fill="var(--t3)" font-size="9" letter-spacing=".1em">HUMANS</text>`;
+  svg.innerHTML += `<text x="30" y="244" fill="var(--t3)" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
+  svg.innerHTML += `<text x="30" y="552" fill="var(--t3)" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
+
+  // Nodes
+  NODES.forEach(n => {
+    const c = COLORS[n.type];
+    let inner = `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="6" fill="${c.fill}" stroke="${c.stroke}" stroke-width="0.5"/>`;
+    inner += `<text x="${n.x+18}" y="${n.y+24}" fill="${c.title}" font-size="12" font-weight="500">${n.label}</text>`;
+    if (n.badge) inner += `<text x="${n.x+18+n.label.length*7.5}" y="${n.y+24}" fill="var(--t3)" font-size="9">${n.badge}</text>`;
+    const lines = (n.sub||"").split("\n");
+    lines.forEach((l,i) => { inner += `<text x="${n.x+18}" y="${n.y+42+i*16}" fill="var(--t3)" font-size="10">${l}</text>`; });
+    if (n.auth) inner += `<text x="${n.x+18}" y="${n.y+n.h-10}" fill="${c.auth||c.stroke}" font-size="8" opacity=".5">AUTHORITY  ${n.auth}</text>`;
+    if (n.io) inner += `<text x="${n.x+18}" y="${n.y+n.h-6}" fill="${c.io||c.stroke}" font-size="8" opacity=".5">${n.io}</text>`;
+    svg.innerHTML += `<g class="node">${inner}</g>`;
+  });
+
+  // Connections per layer
+  const markerMap = {teal:"at",coral:"acl",purple:"ap",green:"agn"};
+  const layerGroups = {deal:"", esc:"", data:"", cash:""};
+
+  CONNECTIONS.forEach(cn => {
+    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
+    const marker = markerMap[cn.color];
+    const op = cn.opacity || 1;
+    let cls = "";
+    let sw = 1.5;
+    let dash = "";
+    if (cn.style === "animated") { cls = "ar"; }
+    else if (cn.style === "animated-up") { cls = "au"; sw = 0.8; }
+    else if (cn.style === "dashed") { dash = 'stroke-dasharray="4 4"'; sw = 0.8; }
+    let line = `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="var(--${cn.color})" stroke-width="${sw}" class="${cls}" ${dash} opacity="${op}" marker-end="url(#${marker})"/>`;
+    if (cn.label) {
+      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
+      line += `<rect x="${mx-cn.label.length*3.2-8}" y="${my-10}" width="${cn.label.length*6.5+16}" height="16" rx="8" fill="var(--s2)" stroke="var(--b1)" stroke-width="0.5"/>`;
+      line += `<text x="${mx}" y="${my+2}" fill="var(--ah)" font-size="8" text-anchor="middle">${cn.label}</text>`;
+    }
+    layerGroups[cn.layer] += line;
+  });
+
+  // Deal states
+  let dealExtra = `<text x="30" y="378" fill="var(--teal)" font-size="9" letter-spacing=".06em" opacity=".5">DEAL STATES</text>`;
+  DEAL_STATES.forEach((s,i) => {
+    const w = s.label.length * 7 + 16;
+    dealExtra += `<rect x="${s.x}" y="390" width="${w}" height="20" rx="10" fill="var(--tl)" stroke="var(--teal)" stroke-width="0.5"/>`;
+    dealExtra += `<text x="${s.x+w/2}" y="404" fill="var(--th)" font-size="9" text-anchor="middle" font-weight="500">${s.label}</text>`;
+    if (i < DEAL_STATES.length - 1) {
+      const nx = DEAL_STATES[i+1].x;
+      dealExtra += `<line x1="${s.x+w}" y1="400" x2="${nx}" y2="400" stroke="var(--teal)" stroke-width="0.4" opacity=".35" marker-end="url(#at)"/>`;
+    }
+  });
+  // Exception states
+  dealExtra += `<rect x="200" y="434" width="104" height="20" rx="10" fill="var(--cl)" stroke="var(--coral)" stroke-width="0.5"/>`;
+  dealExtra += `<text x="252" y="448" fill="var(--ch)" font-size="8" text-anchor="middle" font-weight="500">Human review</text>`;
+  dealExtra += `<rect x="540" y="434" width="44" height="20" rx="10" fill="var(--s2)" stroke="var(--amber)" stroke-width="0.5"/>`;
+  dealExtra += `<text x="562" y="448" fill="var(--ah)" font-size="8" text-anchor="middle" font-weight="500">Late</text>`;
+  dealExtra += `<rect x="614" y="434" width="66" height="20" rx="10" fill="var(--cl)" stroke="var(--coral)" stroke-width="0.5"/>`;
+  dealExtra += `<text x="647" y="448" fill="var(--ch)" font-size="8" text-anchor="middle" font-weight="500">Workout</text>`;
+  dealExtra += `<line x1="584" y1="444" x2="612" y2="444" stroke="var(--coral)" stroke-width="0.3" opacity=".4" marker-end="url(#acl)"/>`;
+  layerGroups.deal += dealExtra;
+
+  // Escalation principle
+  layerGroups.esc += `<rect x="840" y="148" width="236" height="30" rx="6" fill="var(--s1)" stroke="var(--coral)" stroke-width="0.5" opacity=".6"/>`;
+  layerGroups.esc += `<text x="858" y="162" fill="var(--ch)" font-size="9" font-weight="500">Principle</text>`;
+  layerGroups.esc += `<text x="858" y="174" fill="var(--t3)" font-size="8">No human monitors. Agents detect, package, route.</text>`;
+
+  // Cashflow annotation
+  layerGroups.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="var(--s1)" stroke="var(--green)" stroke-width="0.5" opacity=".5"/>`;
+  layerGroups.cash += `<text x="700" y="752" fill="var(--gnh)" font-size="8" text-anchor="middle">$ Factor discount = revenue</text>`;
+
+  // Build layer groups
+  svg.innerHTML += `<g class="lay" id="l-deal">${layerGroups.deal}</g>`;
+  svg.innerHTML += `<g class="lay off" id="l-esc">${layerGroups.esc}</g>`;
+  svg.innerHTML += `<g class="lay off" id="l-data">${layerGroups.data}</g>`;
+  svg.innerHTML += `<g class="lay off" id="l-cash">${layerGroups.cash}</g>`;
+
+  document.getElementById("view-mode").innerHTML = "";
+  document.getElementById("view-mode").appendChild(svg);
+}
+
+// ============================================================
+// OVERLAY TOGGLE LOGIC
+// ============================================================
+const st = {deal:true, esc:false, data:false, cash:false};
+const zm = {esc:["z-esc"], data:["z-data"], cash:["z-cash"]};
+
+function sync() {
+  for (const k in st) {
+    const l = document.getElementById("l-"+k);
+    const b = document.getElementById("t-"+k);
+    if (l) l.classList.toggle("off", !st[k]);
+    if (b) b.classList.toggle("on", st[k]);
+    (zm[k]||[]).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("off", !st[k]);
+    });
+  }
+}
+function tog(k) { st[k] = !st[k]; sync(); }
+
+// ============================================================
+// EXCALIDRAW INTEGRATION
+// ============================================================
+let excalidrawAPI = null;
+let editActive = false;
+
+function nodesToExcalidraw() {
+  let elems = [];
+  let idCounter = 0;
+  const eid = () => "elem_" + (idCounter++);
+
+  const colorMap = {
+    coral: {bg:"#2c1810", stroke:"#D85A30", text:"#F0997B"},
+    teal: {bg:"#0d2e24", stroke:"#1D9E75", text:"#5DCAA5"},
+    purple: {bg:"#1e1840", stroke:"#7F77DD", text:"#AFA9EC"},
+    gray: {bg:"#1a1a26", stroke:"#40405a", text:"#9898aa"},
+    green: {bg:"#152e08", stroke:"#639922", text:"#97C459"},
+  };
+
+  // Scale up for Excalidraw (it uses larger coords)
+  const S = 1.5;
+
+  NODES.forEach(n => {
+    const c = colorMap[n.type];
+    const rectId = eid();
+    const textId = eid();
+    const fullText = n.label + (n.badge ? ` [${n.badge}]` : "") + "\n" + (n.sub||"") + (n.auth ? "\n— " + n.auth : "") + (n.io ? "\n" + n.io : "");
+
+    elems.push({
+      id: rectId, type: "rectangle",
+      x: n.x*S, y: n.y*S, width: n.w*S, height: n.h*S,
+      angle: 0, strokeColor: c.stroke, backgroundColor: c.bg,
+      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: 100,
+      roundness: {type: 3}, isDeleted: false,
+      boundElements: [{id: textId, type: "text"}],
+      locked: false, groupIds: [],
+      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
+      updated: Date.now(), link: null,
+    });
+
+    elems.push({
+      id: textId, type: "text",
+      x: n.x*S + 10, y: n.y*S + 10,
+      width: n.w*S - 20, height: n.h*S - 20,
+      angle: 0, strokeColor: c.text, backgroundColor: "transparent",
+      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: 100,
+      roundness: null, isDeleted: false, boundElements: [],
+      locked: false, groupIds: [],
+      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
+      updated: Date.now(), link: null,
+      text: fullText, fontSize: 14, fontFamily: 3,
+      textAlign: "left", verticalAlign: "top",
+      containerId: rectId, originalText: fullText, autoResize: true, lineHeight: 1.2,
+    });
+  });
+
+  // Connections as arrows
+  CONNECTIONS.forEach(cn => {
+    const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
+    const c = colorMap[cn.color] || {stroke:"#888"};
+    elems.push({
+      id: eid(), type: "arrow",
+      x: fx*S, y: fy*S, width: (tx-fx)*S, height: (ty-fy)*S,
+      angle: 0, strokeColor: c.stroke, backgroundColor: "transparent",
+      fillStyle: "solid", strokeWidth: 1, roughness: 0, opacity: cn.opacity ? cn.opacity*100 : 100,
+      roundness: {type: 2}, isDeleted: false, boundElements: [],
+      locked: false, groupIds: [],
+      seed: Math.floor(Math.random()*999999), version: 1, versionNonce: Math.floor(Math.random()*999999),
+      updated: Date.now(), link: null,
+      points: [[0,0],[(tx-fx)*S,(ty-fy)*S]],
+      startBinding: null, endBinding: null,
+      startArrowhead: null, endArrowhead: "arrow", lastCommittedPoint: null,
+    });
+  });
+
+  return elems;
+}
+
+async function enterEdit() {
+  if (editActive) return;
+  editActive = true;
+  const btn = document.getElementById("edit-btn");
+  btn.classList.add("loading");
+  btn.textContent = "Loading...";
+  document.getElementById("view-mode").classList.add("hidden");
+  document.getElementById("help-bar").classList.add("hidden");
+  document.getElementById("toggles").style.display = "none";
+  document.getElementById("edit-mode").classList.add("active");
+
+  try {
+    // Dynamic import from CDN
+    const React = await import("https://esm.sh/react@18.3.1");
+    const ReactDOM = await import("https://esm.sh/react-dom@18.3.1/client");
+    const ExcalidrawModule = await import("https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom&deps=react@18.3.1,react-dom@18.3.1");
+    const Excalidraw = ExcalidrawModule.Excalidraw;
+
+    document.getElementById("loading-msg").style.display = "none";
+
+    const container = document.getElementById("excalidraw-container");
+    const root = ReactDOM.createRoot(container);
+
+    const initialData = {
+      elements: nodesToExcalidraw(),
+      appState: {
+        viewBackgroundColor: "#0b0b12",
+        theme: "dark",
+        gridSize: 20,
+      },
+    };
+
+    // Build the back button
+    const backBtn = React.createElement("button", {
+      onClick: () => exitEdit(root),
+      style: {
+        position:"absolute", top:"12px", right:"12px", zIndex:1000,
+        fontFamily:"'IBM Plex Mono', monospace", fontSize:"12px",
+        padding:"6px 14px", borderRadius:"6px",
+        border:"1px solid #639922", background:"#152e08", color:"#97C459",
+        cursor:"pointer", display:"flex", alignItems:"center", gap:"6px",
+      }
+    }, "← Back to overlay view");
+
+    const app = React.createElement("div", {style:{width:"100%",height:"100%",position:"relative"}},
+      React.createElement(Excalidraw, {
+        initialData,
+        theme: "dark",
+        ref: (api) => { excalidrawAPI = api; },
+      }),
+      backBtn,
+    );
+
+    root.render(app);
+  } catch (err) {
+    console.error("Failed to load Excalidraw:", err);
+    document.getElementById("loading-msg").innerHTML = `
+      <div style="color:var(--coral);font-weight:500">Failed to load Excalidraw from CDN</div>
+      <div style="font-size:11px;max-width:400px;text-align:center;line-height:1.6">
+        ${err.message}<br><br>
+        As a fallback, you can download the .excalidraw file and open it at
+        <a href="https://excalidraw.com" target="_blank" style="color:var(--teal)">excalidraw.com</a>
+      </div>
+      <button onclick="downloadExcalidraw()" style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid var(--green);background:var(--gnl);color:var(--gnh);cursor:pointer">
+        Download .excalidraw file
+      </button>
+      <button onclick="exitEditSimple()" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 14px;border-radius:6px;border:1px solid var(--b1);background:0;color:var(--t2);cursor:pointer">
+        ← Back to overlay view
+      </button>
+    `;
+  }
+}
+
+function exitEdit(root) {
+  if (root) {
+    try { root.unmount(); } catch(e) {}
+  }
+  editActive = false;
+  document.getElementById("edit-mode").classList.remove("active");
+  document.getElementById("view-mode").classList.remove("hidden");
+  document.getElementById("help-bar").classList.remove("hidden");
+  document.getElementById("toggles").style.display = "flex";
+  document.getElementById("loading-msg").style.display = "flex";
+  const btn = document.getElementById("edit-btn");
+  btn.classList.remove("loading");
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit layout`;
+}
+
+function exitEditSimple() {
+  editActive = false;
+  document.getElementById("edit-mode").classList.remove("active");
+  document.getElementById("view-mode").classList.remove("hidden");
+  document.getElementById("help-bar").classList.remove("hidden");
+  document.getElementById("toggles").style.display = "flex";
+  document.getElementById("loading-msg").style.display = "flex";
+  document.getElementById("loading-msg").innerHTML = `<div class="spinner"></div>Loading Excalidraw editor...`;
+  const btn = document.getElementById("edit-btn");
+  btn.classList.remove("loading");
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit layout`;
+}
+
+function downloadExcalidraw() {
+  const scene = {
+    type: "excalidraw", version: 2,
+    source: "https://excalidraw.com",
+    elements: nodesToExcalidraw(),
+    appState: {viewBackgroundColor:"#0b0b12", gridSize:20},
+    files: {}
+  };
+  const blob = new Blob([JSON.stringify(scene, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "org-architecture.excalidraw"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener("keydown", e => {
+  if (editActive) return;
+  if (e.key==="1"){st.deal=!st.deal;sync()}
+  if (e.key==="2"){st.esc=!st.esc;sync()}
+  if (e.key==="3"){st.data=!st.data;sync()}
+  if (e.key==="4"){st.cash=!st.cash;sync()}
+  if (e.key.toLowerCase()==="a"){st.deal=st.esc=st.data=st.cash=true;sync()}
+  if (e.key==="0"){st.deal=st.esc=st.data=st.cash=false;sync()}
+  if (e.key.toLowerCase()==="e") enterEdit();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderSVG();
+sync();
+</script>
+</body>
+</html>
