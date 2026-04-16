@@ -399,8 +399,11 @@ function render() {
 
   svg.innerHTML = html;
   syncToggles();
-  updatePanel();
 }
+
+// Render canvas only (no panel rebuild) — used by panel inputs
+function renderCanvas() { render(); }
+
 
 function updateViewBox() {
   const svg = document.getElementById("canvas");
@@ -518,18 +521,18 @@ function showNodePanel(ni) {
   `);
 }
 
-function updNode(ni, key, val) { NODES[ni][key] = val; render(); }
+function updNode(ni, key, val) { NODES[ni][key] = val; renderCanvas(); }
 function updNodeExtra(ni, val) {
   const n = NODES[ni];
   if (n.type==='coral') { n.auth=val; delete n.io; }
   else if (n.type==='teal'||n.type==='purple') { n.io=val; delete n.auth; }
   else { delete n.auth; delete n.io; }
-  render();
+  renderCanvas();
 }
 function setNodeType(ni, type) {
   snapshot();
   NODES[ni].type = type;
-  render();
+  render(); showNodePanel(ni);
 }
 
 function showConnPanel(ci) {
@@ -567,7 +570,7 @@ function showConnPanel(ci) {
   `);
 }
 
-function updConn(ci, key, val) { CONNECTIONS[ci][key] = val; render(); }
+function updConn(ci, key, val) { CONNECTIONS[ci][key] = val; renderCanvas(); }
 
 // ============================================================
 // CANVAS INTERACTIONS
@@ -596,7 +599,7 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
       selected = {type:'conn', index:CONNECTIONS.length-1};
       addingConn = false; connFrom = null;
       document.getElementById("btn-add-conn").classList.remove("active");
-      render();
+      render(); updatePanel();
     }
     return;
   }
@@ -606,18 +609,18 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
     selected = {type:'node', index:ni};
     const pt = svgPt(e);
     dragging = {ni, startPt:pt, origX:NODES[ni].x, origY:NODES[ni].y, g:nodeG, moved:false};
-    render();
+    render(); updatePanel();
     // Re-grab the group after render
     dragging.g = svg.querySelector(`[data-node="${ni}"]`);
     e.preventDefault();
   } else if (editing && connG) {
     selected = {type:'conn', index:parseInt(connG.dataset.conn)};
-    render();
+    render(); updatePanel();
     e.preventDefault();
   } else if (nodeG && !editing) {
     // Browse mode: select for info
     selected = {type:'node', index:parseInt(nodeG.dataset.node)};
-    render();
+    render(); updatePanel();
   } else if (!nodeG && !connG) {
     // Pan or deselect
     if (e.button === 0 && !e.target.closest("#panel")) {
@@ -745,7 +748,7 @@ function addNode() {
   const cx = panX + W/zoom/2 - 100, cy = panY + H/zoom/2 - 30;
   NODES.push({id:"n_"+Date.now(), label:"New Node", sub:"Description", type:"gray", x:Math.round(cx), y:Math.round(cy), w:200, h:60});
   selected = {type:'node', index:NODES.length-1};
-  render();
+  render(); updatePanel();
 }
 
 function startAddConn() {
@@ -778,7 +781,7 @@ function duplicateNode() {
   n.x += 20; n.y += 20;
   NODES.push(n);
   selected = {type:'node', index:NODES.length-1};
-  render();
+  render(); updatePanel();
 }
 
 // ============================================================
