@@ -25,10 +25,10 @@ body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height
 
 /* Header */
 header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
-  padding:8px 16px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);flex-shrink:0;backdrop-filter:blur(8px)}
-header h1{font-size:13px;font-weight:500;letter-spacing:-.01em}
+  padding:6px 12px;border-bottom:1px solid var(--b1);background:rgba(11,11,18,.95);flex-shrink:0;backdrop-filter:blur(8px);gap:8px}
+header h1{font-size:13px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;flex-shrink:0}
 header h1 span{color:var(--t3);font-weight:400}
-.hgroup{display:flex;gap:2px;align-items:center}
+.hgroup{display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .tog{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px 3px 6px;border-radius:5px;
   border:1px solid transparent;background:0;color:var(--t3);cursor:pointer;transition:all .15s;
   display:flex;align-items:center;gap:4px;user-select:none}
@@ -47,13 +47,13 @@ header h1 span{color:var(--t3);font-weight:400}
 .hbtn.primary:hover{background:var(--green);color:#fff}
 .hbtn.danger:hover{background:var(--cl);color:var(--ch);border-color:var(--coral)}
 .hbtn svg{width:12px;height:12px}
-.mode-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+.mode-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-right:4px;
+  padding:2px 6px;border-radius:3px;transition:all .2s}
+.mode-label.editing{color:var(--gnh);background:var(--gnl);border:1px solid rgba(99,153,34,.3)}
 
 /* Canvas */
 #canvas-wrap{flex:1;position:relative;overflow:hidden;cursor:default}
-#canvas-wrap.editing{cursor:default}
-#canvas-wrap.editing .node-g{cursor:grab}
-#canvas-wrap.editing .node-g:active{cursor:grabbing}
+#canvas-wrap.editing{cursor:default;box-shadow:inset 0 1px 0 rgba(99,153,34,.2)}
 #canvas-wrap.panning{cursor:grabbing}
 #canvas{width:100%;height:100%}
 #canvas text{font-family:'IBM Plex Mono',monospace}
@@ -69,7 +69,10 @@ header h1 span{color:var(--t3);font-weight:400}
 .au{stroke-dasharray:5 4;animation:fu 1.6s linear infinite}
 
 /* Node hover/selection */
-.node-g{transition:filter .2s,transform .2s}
+.node-g{transition:filter .2s,transform .2s;cursor:pointer}
+.node-g:hover{filter:brightness(1.05)}
+#canvas-wrap.editing .node-g{cursor:grab}
+#canvas-wrap.editing .node-g:active{cursor:grabbing}
 #canvas-wrap.editing .node-g:hover{filter:brightness(1.08) drop-shadow(0 2px 8px rgba(0,0,0,.3))}
 .node-g.selected rect.node-bg{stroke:var(--green)!important;stroke-width:1.5!important}
 @keyframes march{to{stroke-dashoffset:-12}}
@@ -136,10 +139,10 @@ header h1 span{color:var(--t3);font-weight:400}
 
 /* Help bar */
 .help{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;
-  font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);
-  padding:4px 12px;background:rgba(11,11,18,.8);border-radius:6px;border:1px solid var(--b1);
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t2);
+  padding:5px 14px;background:rgba(11,11,18,.85);border-radius:6px;border:1px solid var(--b1);
   backdrop-filter:blur(4px);white-space:nowrap;user-select:none}
-.help b{color:var(--t2)}
+.help b{color:var(--t1)}
 .toast{position:absolute;bottom:48px;left:50%;transform:translateX(-50%) translateY(12px);z-index:20;
   font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gnh);padding:6px 16px;
   background:var(--gnl);border:1px solid var(--green);border-radius:6px;
@@ -237,19 +240,19 @@ header h1 span{color:var(--t3);font-weight:400}
 // DATA MODEL
 // ============================================================
 const NODES = [
-  {id:"ceo", label:"CEO / Partnerships", sub:"PM acquisition · pricing · workouts\nInvestor relations · strategic direction", auth:"pricing, PM terms, write-offs", row:"human", type:"coral", x:60, y:74, w:310, h:100},
-  {id:"credit", label:"Head of Credit", sub:"Underwriting policy · risk thresholds · exceptions\nPortfolio monitoring · concentration limits", auth:"approve/decline, limits, UW policy", row:"human", type:"coral", x:410, y:74, w:340, h:100},
-  {id:"eng", label:"Head of Eng / Ops", sub:"Platform · agent orchestration\nPM integrations · compliance infra", auth:"system changes, deployments", row:"human", type:"coral", x:790, y:74, w:300, h:100},
-  {id:"intake", label:"Intake Agent", badge:"LLM", sub:"Reads bids, leases, rent rolls\nExtracts structured deal data", io:"IN: PM docs → OUT: deal record", row:"agent", type:"purple", x:30, y:282, w:242, h:84},
-  {id:"scoring", label:"Scoring Engine", badge:"RULES", sub:"Rent coverage · lease term · LTV\nPM track record · concentration", io:"IN: deal record → OUT: decision", row:"agent", type:"teal", x:306, y:282, w:242, h:84},
-  {id:"servicing", label:"Servicing Engine", badge:"RULES", sub:"Rent-split calc · ACH · reconcile\nPayment tracking · UCC lifecycle", io:"IN: funded deal → OUT: payments", row:"agent", type:"teal", x:582, y:282, w:242, h:84},
-  {id:"comms", label:"Comms Agent", badge:"LLM", sub:"PM status · payment confirms\nSupport triage · collections", io:"IN: events → OUT: messages", row:"agent", type:"purple", x:858, y:282, w:242, h:84},
-  {id:"pm_adapt", label:"PM Platform Adapters", sub:"AppFolio · Buildium · Rentvine\nNormalized schema", row:"infra", type:"gray", x:30, y:560, w:240, h:72},
-  {id:"ledger", label:"Deal Ledger", sub:"State · payments · UCC status\nTrue-sale audit trail", row:"infra", type:"gray", x:300, y:560, w:240, h:72},
-  {id:"column", label:"Column Bank", sub:"ACH origination · receipt\nFBO accounts · ledger", row:"infra", type:"green", x:570, y:560, w:240, h:72},
-  {id:"kb", label:"Knowledge Base", sub:"UW policy · PM profiles\nCompliance · templates", row:"infra", type:"gray", x:840, y:560, w:240, h:72},
-  {id:"facility", label:"Credit Facility", sub:"Warehouse line", row:"cashflow", type:"green", x:50, y:684, w:160, h:44},
-  {id:"contractor", label:"Contractor / PM", sub:"Receives repair funds", row:"cashflow", type:"green", x:1060, y:684, w:170, h:44},
+  {id:"ceo", label:"CEO / Partnerships", sub:"PM acquisition · pricing · workouts\nInvestor relations · strategic direction", auth:"pricing, PM terms, write-offs", row:"human", type:"coral", x:60, y:46, w:310, h:100},
+  {id:"credit", label:"Head of Credit", sub:"Underwriting policy · risk thresholds · exceptions\nPortfolio monitoring · concentration limits", auth:"approve/decline, limits, UW policy", row:"human", type:"coral", x:410, y:46, w:340, h:100},
+  {id:"eng", label:"Head of Eng / Ops", sub:"Platform · agent orchestration\nPM integrations · compliance infra", auth:"system changes, deployments", row:"human", type:"coral", x:790, y:46, w:300, h:100},
+  {id:"intake", label:"Intake Agent", badge:"LLM", sub:"Reads bids, leases, rent rolls\nExtracts structured deal data", io:"IN: PM docs → OUT: deal record", row:"agent", type:"purple", x:30, y:220, w:242, h:84},
+  {id:"scoring", label:"Scoring Engine", badge:"RULES", sub:"Rent coverage · lease term · LTV\nPM track record · concentration", io:"IN: deal record → OUT: decision", row:"agent", type:"teal", x:306, y:220, w:242, h:84},
+  {id:"servicing", label:"Servicing Engine", badge:"RULES", sub:"Rent-split calc · ACH · reconcile\nPayment tracking · UCC lifecycle", io:"IN: funded deal → OUT: payments", row:"agent", type:"teal", x:582, y:220, w:242, h:84},
+  {id:"comms", label:"Comms Agent", badge:"LLM", sub:"PM status · payment confirms\nSupport triage · collections", io:"IN: events → OUT: messages", row:"agent", type:"purple", x:858, y:220, w:242, h:84},
+  {id:"pm_adapt", label:"PM Platform Adapters", sub:"AppFolio · Buildium · Rentvine\nNormalized schema", row:"infra", type:"gray", x:30, y:460, w:240, h:72},
+  {id:"ledger", label:"Deal Ledger", sub:"State · payments · UCC status\nTrue-sale audit trail", row:"infra", type:"gray", x:300, y:460, w:240, h:72},
+  {id:"column", label:"Column Bank", sub:"ACH origination · receipt\nFBO accounts · ledger", row:"infra", type:"green", x:570, y:460, w:240, h:72},
+  {id:"kb", label:"Knowledge Base", sub:"UW policy · PM profiles\nCompliance · templates", row:"infra", type:"gray", x:840, y:460, w:240, h:72},
+  {id:"facility", label:"Credit Facility", sub:"Warehouse line", row:"cashflow", type:"green", x:50, y:568, w:160, h:44},
+  {id:"contractor", label:"Contractor / PM", sub:"Receives repair funds", row:"cashflow", type:"green", x:1060, y:568, w:170, h:44},
 ];
 
 const CONNECTIONS = [
@@ -277,28 +280,28 @@ const DEAL_STATES = [
 
 const PILLS = [
   // Deal lifecycle pills
-  {id:"p_recv", text:"Received", x:46, y:392, color:"teal", layer:"deal"},
-  {id:"p_score", text:"Scoring", x:164, y:392, color:"teal", layer:"deal"},
-  {id:"p_approv", text:"Approved", x:274, y:392, color:"teal", layer:"deal"},
-  {id:"p_fund", text:"Funded", x:394, y:392, color:"teal", layer:"deal"},
-  {id:"p_active", text:"Active", x:502, y:392, color:"teal", layer:"deal"},
-  {id:"p_closed", text:"Closed", x:700, y:392, color:"teal", layer:"deal"},
+  {id:"p_recv", text:"Received", x:46, y:328, color:"teal", layer:"deal"},
+  {id:"p_score", text:"Scoring", x:164, y:328, color:"teal", layer:"deal"},
+  {id:"p_approv", text:"Approved", x:274, y:328, color:"teal", layer:"deal"},
+  {id:"p_fund", text:"Funded", x:394, y:328, color:"teal", layer:"deal"},
+  {id:"p_active", text:"Active", x:502, y:328, color:"teal", layer:"deal"},
+  {id:"p_closed", text:"Closed", x:700, y:328, color:"teal", layer:"deal"},
   // Exception states
-  {id:"p_review", text:"Human review", x:200, y:428, color:"coral", layer:"deal"},
-  {id:"p_late", text:"Late", x:540, y:428, color:"amber", layer:"deal"},
-  {id:"p_workout", text:"Workout", x:614, y:428, color:"coral", layer:"deal"},
+  {id:"p_review", text:"Human review", x:200, y:360, color:"coral", layer:"deal"},
+  {id:"p_late", text:"Late", x:540, y:360, color:"amber", layer:"deal"},
+  {id:"p_workout", text:"Workout", x:614, y:360, color:"coral", layer:"deal"},
   // Escalation principle
-  {id:"p_principle", text:"Principle: No human monitors. Agents detect, package, route.", x:840, y:148, color:"coral", layer:"esc", wide:true},
+  {id:"p_principle", text:"Principle: No human monitors. Agents detect, package, route.", x:840, y:120, color:"coral", layer:"esc", wide:true},
   // Cashflow annotation
-  {id:"p_revenue", text:"$ Factor discount = revenue", x:620, y:740, color:"green", layer:"cash", wide:true},
+  {id:"p_revenue", text:"$ Factor discount = revenue", x:620, y:628, color:"green", layer:"cash", wide:true},
   // Deal lifecycle label
-  {id:"p_deal_lbl", text:"DEAL LIFECYCLE", x:30, y:376, color:"teal", layer:"deal", isLabel:true},
+  {id:"p_deal_lbl", text:"DEAL LIFECYCLE", x:30, y:314, color:"teal", layer:"deal", isLabel:true},
 ];
 
 const LABELS = [
-  {id:"lbl_humans", text:"HUMANS", x:30, y:28},
-  {id:"lbl_processing", text:"PROCESSING", x:30, y:244},
-  {id:"lbl_infra", text:"INFRASTRUCTURE", x:30, y:552},
+  {id:"lbl_humans", text:"HUMANS", x:30, y:32},
+  {id:"lbl_processing", text:"PROCESSING", x:30, y:206},
+  {id:"lbl_infra", text:"INFRASTRUCTURE", x:30, y:448},
 ];
 
 const COLORS = {
@@ -608,9 +611,9 @@ function render() {
   html += `<rect width="${W}" height="${H}" fill="#0b0b12"/>`;
 
   // Zone backgrounds
-  html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="134" width="${W}" height="112" fill="#D85A30" opacity=".015"/>`;
-  html += `<rect class="zbg${layers.data?'':' off'}" id="z-data" x="0" y="472" width="${W}" height="82" fill="#7F77DD" opacity=".018"/>`;
-  html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="670" width="${W}" height="86" fill="#639922" opacity=".02"/>`;
+  html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="106" width="${W}" height="100" fill="#D85A30" opacity=".015"/>`;
+  html += `<rect class="zbg${layers.data?'':' off'}" id="z-data" x="0" y="390" width="${W}" height="60" fill="#7F77DD" opacity=".018"/>`;
+  html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="555" width="${W}" height="70" fill="#639922" opacity=".02"/>`;
 
   // Row labels
   LABELS.forEach((lb, li) => {
@@ -709,16 +712,16 @@ function render() {
     }
     // Description lines
     (n.sub||"").split("\n").forEach((l,i) => {
-      g += `<text x="${n.x+14}" y="${n.y+38+i*14}" fill="#6e6e88" font-size="9.5">${esc(l)}</text>`;
+      g += `<text x="${n.x+14}" y="${n.y+38+i*14}" fill="#8585a0" font-size="9.5">${esc(l)}</text>`;
     });
     // Authority / IO footer
     if (n.auth) {
-      g += `<line x1="${n.x+14}" y1="${n.y+n.h-18}" x2="${n.x+n.w-14}" y2="${n.y+n.h-18}" stroke="${c.stroke}" stroke-width=".3" opacity=".15"/>`;
-      g += `<text x="${n.x+14}" y="${n.y+n.h-7}" fill="${c.auth||c.stroke}" font-size="7.5" opacity=".45" letter-spacing=".04em">AUTHORITY  ${esc(n.auth)}</text>`;
+      g += `<line x1="${n.x+14}" y1="${n.y+n.h-18}" x2="${n.x+n.w-14}" y2="${n.y+n.h-18}" stroke="${c.stroke}" stroke-width=".3" opacity=".25"/>`;
+      g += `<text x="${n.x+14}" y="${n.y+n.h-7}" fill="${c.auth||c.stroke}" font-size="7.5" opacity=".6" letter-spacing=".04em">AUTHORITY  ${esc(n.auth)}</text>`;
     }
     if (n.io) {
-      g += `<line x1="${n.x+14}" y1="${n.y+n.h-16}" x2="${n.x+n.w-14}" y2="${n.y+n.h-16}" stroke="${c.stroke}" stroke-width=".3" opacity=".15"/>`;
-      g += `<text x="${n.x+14}" y="${n.y+n.h-5}" fill="${c.io||c.stroke}" font-size="7.5" opacity=".45">${esc(n.io)}</text>`;
+      g += `<line x1="${n.x+14}" y1="${n.y+n.h-16}" x2="${n.x+n.w-14}" y2="${n.y+n.h-16}" stroke="${c.stroke}" stroke-width=".3" opacity=".25"/>`;
+      g += `<text x="${n.x+14}" y="${n.y+n.h-5}" fill="${c.io||c.stroke}" font-size="7.5" opacity=".6">${esc(n.io)}</text>`;
     }
     g += `</g>`;
     nodesHTML += g;
@@ -788,7 +791,9 @@ function toggleEdit() {
   const wrap = document.getElementById("canvas-wrap");
   wrap.classList.toggle("editing", editing);
   document.getElementById("edit-toggle").classList.toggle("active", editing);
-  document.getElementById("mode-label").textContent = editing ? "edit" : "browse";
+  const ml = document.getElementById("mode-label");
+  ml.textContent = editing ? "edit" : "browse";
+  ml.classList.toggle("editing", editing);
   // Show/hide edit tools
   const show = editing ? "" : "none";
   document.getElementById("edit-tools").style.display = show;
