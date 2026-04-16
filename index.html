@@ -191,11 +191,11 @@ header h1 span{color:var(--t3);font-weight:400}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-5.64-11.36L23 10"/></svg>
     </button>
     <div class="sep" id="save-sep" style="display:none"></div>
-    <button class="hbtn primary" id="btn-save" onclick="saveToStorage()" style="display:none">
+    <button class="hbtn" id="btn-save" onclick="saveToStorage()" style="display:none" title="Save to browser (⌘S)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Save
+      Save draft
     </button>
-    <button class="hbtn primary" id="btn-publish" onclick="publish()" style="display:none">
+    <button class="hbtn primary" id="btn-publish" onclick="publish()" style="display:none" title="Publish for everyone (⌘⇧S)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
       Publish
     </button>
@@ -289,7 +289,7 @@ const DEFAULT_CONNECTIONS = JSON.parse(JSON.stringify(CONNECTIONS));
 
 function saveToStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, v:1}));
-  showToast("Saved");
+  showToast("Draft saved to browser");
 }
 function loadFromStorage() {
   try {
