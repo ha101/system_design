@@ -387,6 +387,47 @@ function etog(k) {
 function closeForms() {
   document.getElementById("node-form").classList.remove("visible");
   document.getElementById("conn-form").classList.remove("visible");
+  const il = document.getElementById("inline-label");
+  if (il) il.remove();
+}
+
+function showInlineLabelEdit(ci, svgX, svgY, svg) {
+  closeForms();
+  const cn = CONNECTIONS[ci];
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  // Convert SVG coords to screen coords
+  const screenX = rect.left + (svgX / vb.width) * rect.width;
+  const screenY = rect.top + (svgY / vb.height) * rect.height;
+  const canvas = document.getElementById("edit-canvas");
+  const canvasRect = canvas.getBoundingClientRect();
+
+  const input = document.createElement("input");
+  input.id = "inline-label";
+  input.value = cn.label || "";
+  input.placeholder = "Label (optional)";
+  input.style.cssText = `position:absolute;z-index:25;
+    left:${screenX - canvasRect.left - 80}px;top:${screenY - canvasRect.top - 12}px;
+    width:160px;padding:4px 8px;border-radius:6px;border:1px solid var(--green);
+    background:var(--s1);color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:11px;
+    text-align:center;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
+
+  function commit() {
+    cn.label = input.value || undefined;
+    input.remove();
+    renderEditSVG();
+  }
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") commit();
+    if (e.key === "Escape") { input.remove(); }
+    e.stopPropagation();
+  });
+  input.addEventListener("blur", commit);
+
+  // Place in edit-canvas (which is position:relative via edit-mode)
+  document.getElementById("edit-mode").appendChild(input);
+  input.focus();
+  input.select();
 }
 
 function renderEditSVG() {
@@ -581,7 +622,11 @@ function setupEditEvents(svg) {
       selectedConn = ci;
       selectedNode = null;
       renderEditSVG();
-      showConnForm(ci);
+      // Inline label edit: show a positioned text input over the label
+      const cn = CONNECTIONS[ci];
+      const {fx,fy,tx,ty} = connectorPoints(cn.from, cn.to);
+      const mx = fx + (tx-fx)/2, my = fy + (ty-fy)/2;
+      showInlineLabelEdit(ci, mx, my, svg);
     }
   });
 }
