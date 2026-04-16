@@ -275,6 +275,26 @@ const DEAL_STATES = [
   {label:"Funded", x:394}, {label:"Active", x:502}, {label:"Closed", x:700},
 ];
 
+const PILLS = [
+  // Deal lifecycle pills
+  {id:"p_recv", text:"Received", x:46, y:392, color:"teal", layer:"deal"},
+  {id:"p_score", text:"Scoring", x:164, y:392, color:"teal", layer:"deal"},
+  {id:"p_approv", text:"Approved", x:274, y:392, color:"teal", layer:"deal"},
+  {id:"p_fund", text:"Funded", x:394, y:392, color:"teal", layer:"deal"},
+  {id:"p_active", text:"Active", x:502, y:392, color:"teal", layer:"deal"},
+  {id:"p_closed", text:"Closed", x:700, y:392, color:"teal", layer:"deal"},
+  // Exception states
+  {id:"p_review", text:"Human review", x:200, y:428, color:"coral", layer:"deal"},
+  {id:"p_late", text:"Late", x:540, y:428, color:"amber", layer:"deal"},
+  {id:"p_workout", text:"Workout", x:614, y:428, color:"coral", layer:"deal"},
+  // Escalation principle
+  {id:"p_principle", text:"Principle: No human monitors. Agents detect, package, route.", x:840, y:148, color:"coral", layer:"esc", wide:true},
+  // Cashflow annotation
+  {id:"p_revenue", text:"$ Factor discount = revenue", x:620, y:740, color:"green", layer:"cash", wide:true},
+  // Deal lifecycle label
+  {id:"p_deal_lbl", text:"DEAL LIFECYCLE", x:30, y:376, color:"teal", layer:"deal", isLabel:true},
+];
+
 const LABELS = [
   {id:"lbl_humans", text:"HUMANS", x:30, y:28},
   {id:"lbl_processing", text:"PROCESSING", x:30, y:244},
@@ -296,9 +316,10 @@ const STORAGE_KEY = "orgarch_save";
 const DEFAULT_NODES = JSON.parse(JSON.stringify(NODES));
 const DEFAULT_CONNECTIONS = JSON.parse(JSON.stringify(CONNECTIONS));
 const DEFAULT_LABELS = JSON.parse(JSON.stringify(LABELS));
+const DEFAULT_PILLS = JSON.parse(JSON.stringify(PILLS));
 
 function saveToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, labels:LABELS, v:2}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, labels:LABELS, pills:PILLS, v:3}));
   showToast("Draft saved to browser");
 }
 function loadFromStorage() {
@@ -310,6 +331,7 @@ function loadFromStorage() {
       NODES.length = 0; NODES.push(...d.nodes);
       CONNECTIONS.length = 0; CONNECTIONS.push(...d.connections);
       if (d.labels) { LABELS.length = 0; LABELS.push(...d.labels); }
+      if (d.pills) { PILLS.length = 0; PILLS.push(...d.pills); }
       return true;
     }
   } catch(e) {}
@@ -320,6 +342,7 @@ function resetToDefault() {
   NODES.length = 0; NODES.push(...JSON.parse(JSON.stringify(DEFAULT_NODES)));
   CONNECTIONS.length = 0; CONNECTIONS.push(...JSON.parse(JSON.stringify(DEFAULT_CONNECTIONS)));
   LABELS.length = 0; LABELS.push(...JSON.parse(JSON.stringify(DEFAULT_LABELS)));
+  PILLS.length = 0; PILLS.push(...JSON.parse(JSON.stringify(DEFAULT_PILLS)));
   localStorage.removeItem(STORAGE_KEY);
   selected = null; closePanel(); render();
   showToast("Reset to default");
@@ -480,6 +503,11 @@ function replaceDataInHTML(html, nodes, conns) {
     /const LABELS = \[[\s\S]*?\n\];/,
     "const LABELS = " + labelsStr + ";"
   );
+  const pillsStr = JSON.stringify(PILLS, null, 2);
+  html = html.replace(
+    /const PILLS = \[[\s\S]*?\n\];/,
+    "const PILLS = " + pillsStr + ";"
+  );
   return html;
 }
 
@@ -496,26 +524,28 @@ const W = 1280, H = 760;
 // Undo
 const undoStack = [], redoStack = [];
 function snapshot() {
-  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS)),p:JSON.parse(JSON.stringify(PILLS))});
   redoStack.length = 0;
   if (undoStack.length > 50) undoStack.shift();
 }
 function undo() {
   if (!undoStack.length) return;
-  redoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
+  redoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS)),p:JSON.parse(JSON.stringify(PILLS))});
   const s = undoStack.pop();
   NODES.length = 0; NODES.push(...s.n);
   CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
   if (s.l) { LABELS.length = 0; LABELS.push(...s.l); }
+  if (s.p) { PILLS.length = 0; PILLS.push(...s.p); }
   selected = null; render();
 }
 function redo() {
   if (!redoStack.length) return;
-  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS)),p:JSON.parse(JSON.stringify(PILLS))});
   const s = redoStack.pop();
   NODES.length = 0; NODES.push(...s.n);
   CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
   if (s.l) { LABELS.length = 0; LABELS.push(...s.l); }
+  if (s.p) { PILLS.length = 0; PILLS.push(...s.p); }
   selected = null; render();
 }
 
@@ -616,33 +646,45 @@ function render() {
     layerHTML[cn.layer] += g;
   });
 
-  // Deal states (static decoration in deal layer)
-  let dealExtra = `<text x="30" y="380" fill="#1D9E75" font-size="8" letter-spacing=".08em" opacity=".4">DEAL LIFECYCLE</text>`;
-  DEAL_STATES.forEach((s,i) => {
-    const w = s.label.length*6.2+16;
-    dealExtra += `<rect x="${s.x}" y="392" width="${w}" height="18" rx="9" fill="#0e3028" stroke="#1D9E75" stroke-width=".4"/>`;
-    dealExtra += `<text x="${s.x+w/2}" y="404" fill="#5DCAA5" font-size="8" text-anchor="middle" font-weight="500">${s.label}</text>`;
-    if (i<DEAL_STATES.length-1) {
-      const nx = DEAL_STATES[i+1].x;
-      const mid = s.x+w + (nx-s.x-w)/2;
-      dealExtra += `<path d="M${s.x+w+2},401 C${mid},401 ${mid},401 ${nx-2},401" fill="none" stroke="#1D9E75" stroke-width=".4" opacity=".3" marker-end="url(#m-teal)"/>`;
+  // Pills (deal states, exception states, annotations) — per layer
+  const PILL_COLORS = {
+    teal:{fill:"#0e3028",stroke:"#1D9E75",text:"#5DCAA5"},
+    coral:{fill:"#2c1810",stroke:"#D85A30",text:"#F0997B"},
+    amber:{fill:"#1c1c28",stroke:"#BA7517",text:"#FAC775"},
+    green:{fill:"#13131c",stroke:"#639922",text:"#97C459"},
+    purple:{fill:"#1e1840",stroke:"#7F77DD",text:"#AFA9EC"},
+    gray:{fill:"#1a1a26",stroke:"#40405a",text:"#9898aa"},
+  };
+  PILLS.forEach((pill, pi) => {
+    const pc = PILL_COLORS[pill.color] || PILL_COLORS.gray;
+    const isSel = selected && selected.type==='pill' && selected.index===pi;
+    let g = `<g data-pill="${pi}" class="pill-g${isSel?' selected':''}" style="cursor:${editing?'grab':'default'}">`;
+    if (pill.isLabel) {
+      // Section label (like "DEAL LIFECYCLE")
+      g += `<rect x="${pill.x-4}" y="${pill.y-10}" width="${pill.text.length*5.5+8}" height="14" fill="transparent"/>`;
+      g += `<text x="${pill.x}" y="${pill.y}" fill="${isSel?'#639922':pc.stroke}" font-size="8" letter-spacing=".08em" opacity="${isSel?1:.4}">${esc(pill.text)}</text>`;
+    } else if (pill.wide) {
+      // Wide annotation box
+      const tw = pill.text.length*5+20;
+      g += `<rect x="${pill.x}" y="${pill.y}" width="${tw}" height="${pill.text.includes(':')?28:18}" rx="8" fill="#13131c" stroke="${isSel?'#639922':pc.stroke}" stroke-width="${isSel?1.5:.4}" opacity="${isSel?1:.5}"/>`;
+      if (pill.text.includes(':')) {
+        const [title,...rest] = pill.text.split(':');
+        g += `<text x="${pill.x+10}" y="${pill.y+13}" fill="${pc.text}" font-size="8.5" font-weight="500">${esc(title.trim())}</text>`;
+        g += `<text x="${pill.x+10}" y="${pill.y+24}" fill="#6e6e88" font-size="7.5">${esc(rest.join(':').trim())}</text>`;
+      } else {
+        g += `<text x="${pill.x+tw/2}" y="${pill.y+12}" fill="${pc.text}" font-size="7.5" text-anchor="middle">${esc(pill.text)}</text>`;
+      }
+    } else {
+      // Standard pill
+      const pw = pill.text.length*6.2+16;
+      g += `<rect x="${pill.x}" y="${pill.y}" width="${pw}" height="18" rx="9" fill="${pc.fill}" stroke="${isSel?'#639922':pc.stroke}" stroke-width="${isSel?1.5:.4}"/>`;
+      g += `<text x="${pill.x+pw/2}" y="${pill.y+12}" fill="${pc.text}" font-size="8" text-anchor="middle" font-weight="500">${esc(pill.text)}</text>`;
+    }
+    g += `</g>`;
+    if (pill.layer && layerHTML[pill.layer] !== undefined) {
+      layerHTML[pill.layer] += g;
     }
   });
-  dealExtra += `<rect x="200" y="428" width="104" height="18" rx="9" fill="#2c1810" stroke="#D85A30" stroke-width=".4"/>`;
-  dealExtra += `<text x="252" y="440" fill="#F0997B" font-size="7.5" text-anchor="middle" font-weight="500">Human review</text>`;
-  dealExtra += `<rect x="540" y="428" width="44" height="18" rx="9" fill="#1c1c28" stroke="#BA7517" stroke-width=".4"/>`;
-  dealExtra += `<text x="562" y="440" fill="#FAC775" font-size="7.5" text-anchor="middle" font-weight="500">Late</text>`;
-  dealExtra += `<rect x="614" y="428" width="66" height="18" rx="9" fill="#2c1810" stroke="#D85A30" stroke-width=".4"/>`;
-  dealExtra += `<text x="647" y="440" fill="#F0997B" font-size="7.5" text-anchor="middle" font-weight="500">Workout</text>`;
-  dealExtra += `<path d="M584,437 C598,437 598,437 612,437" fill="none" stroke="#D85A30" stroke-width=".3" opacity=".4" marker-end="url(#m-coral)"/>`;
-  layerHTML.deal += dealExtra;
-
-  layerHTML.esc += `<rect x="840" y="148" width="236" height="30" rx="8" fill="#13131c" stroke="#D85A30" stroke-width=".4" opacity=".5"/>`;
-  layerHTML.esc += `<text x="856" y="161" fill="#F0997B" font-size="8.5" font-weight="500">Principle</text>`;
-  layerHTML.esc += `<text x="856" y="173" fill="#6e6e88" font-size="7.5">No human monitors. Agents detect, package, route.</text>`;
-
-  layerHTML.cash += `<rect x="620" y="740" width="160" height="16" rx="8" fill="#13131c" stroke="#639922" stroke-width=".4" opacity=".4"/>`;
-  layerHTML.cash += `<text x="700" y="751" fill="#97C459" font-size="7.5" text-anchor="middle">$ Factor discount = revenue</text>`;
 
   // Nodes
   let nodesHTML = "";
@@ -708,8 +750,8 @@ function fitView() {
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   NODES.forEach(n => { minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x+n.w); maxY=Math.max(maxY,n.y+n.h); });
   if (!NODES.length) { zoom=1; panX=0; panY=0; updateViewBox(); return; }
-  // Include labels in bounding
   LABELS.forEach(lb => { minX=Math.min(minX,lb.x); minY=Math.min(minY,lb.y-12); maxX=Math.max(maxX,lb.x+100); maxY=Math.max(maxY,lb.y+4); });
+  PILLS.forEach(p => { minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x+p.text.length*6+20); maxY=Math.max(maxY,p.y+20); });
   const pad = 30;
   minX -= pad; minY -= pad; maxX += pad; maxY += pad;
   const cw = maxX-minX, ch = maxY-minY;
@@ -890,6 +932,7 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
   const nodeG = e.target.closest("[data-node]");
   const connG = e.target.closest("[data-conn]");
   const labelG = e.target.closest("[data-label]");
+  const pillG = e.target.closest("[data-pill]");
 
   closeCtx();
 
@@ -932,11 +975,19 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
     render();
     dragging.g = svg.querySelector(`[data-label="${li}"]`);
     e.preventDefault();
+  } else if (editing && pillG) {
+    const pi = parseInt(pillG.dataset.pill);
+    selected = {type:'pill', index:pi};
+    const pt = svgPt(e);
+    dragging = {ni:pi, startPt:pt, origX:PILLS[pi].x, origY:PILLS[pi].y, g:pillG, moved:false, isPill:true};
+    render();
+    dragging.g = svg.querySelector(`[data-pill="${pi}"]`);
+    e.preventDefault();
   } else if (nodeG && !editing) {
     // Browse mode: select for info
     selected = {type:'node', index:parseInt(nodeG.dataset.node)};
     render(); updatePanel();
-  } else if (!nodeG && !connG && !labelG) {
+  } else if (!nodeG && !connG && !labelG && !pillG) {
     // Pan or deselect
     if (e.button === 0 && !e.target.closest("#panel")) {
       if (selected) { selected = null; closePanel(); render(); }
@@ -981,6 +1032,9 @@ document.addEventListener("mouseup", e => {
       if (dragging.isLabel) {
         LABELS[dragging.ni].x = Math.round(dragging.origX + dx);
         LABELS[dragging.ni].y = Math.round(dragging.origY + dy);
+      } else if (dragging.isPill) {
+        PILLS[dragging.ni].x = Math.round(dragging.origX + dx);
+        PILLS[dragging.ni].y = Math.round(dragging.origY + dy);
       } else {
         NODES[dragging.ni].x = Math.round(dragging.origX + dx);
         NODES[dragging.ni].y = Math.round(dragging.origY + dy);
@@ -1002,6 +1056,7 @@ document.getElementById("canvas-wrap").addEventListener("dblclick", e => {
   const nodeG = e.target.closest("[data-node]");
   const connG = e.target.closest("[data-conn]");
   const labelG = e.target.closest("[data-label]");
+  const pillG2 = e.target.closest("[data-pill]");
   if (nodeG) {
     const ni = parseInt(nodeG.dataset.node);
     selected = {type:'node', index:ni};
@@ -1014,6 +1069,11 @@ document.getElementById("canvas-wrap").addEventListener("dblclick", e => {
     const {fx,fy,tx,ty} = connPts(cn.from, cn.to);
     const mx = fx+(tx-fx)/2, my = fy+(ty-fy)/2;
     inlineEdit(ci, mx, my);
+  } else if (pillG2) {
+    const pi = parseInt(pillG2.dataset.pill);
+    selected = {type:'pill', index:pi};
+    render();
+    inlinePillEdit(pi);
   } else if (labelG) {
     const li = parseInt(labelG.dataset.label);
     selected = {type:'label', index:li};
@@ -1085,6 +1145,33 @@ function inlineLabelTextEdit(li) {
     background:#13131c;color:#e0e0ea;font-family:'IBM Plex Mono',monospace;font-size:9px;
     letter-spacing:.1em;text-transform:uppercase;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
   function commit() { snapshot(); lb.text = input.value; input.remove(); render(); }
+  input.addEventListener("keydown", e => { if(e.key==="Enter")commit(); if(e.key==="Escape"){input.remove();} e.stopPropagation(); });
+  input.addEventListener("blur", commit);
+  wrap.appendChild(input);
+  input.focus(); input.select();
+}
+
+function inlinePillEdit(pi) {
+  const old = document.getElementById("inline-edit");
+  if (old) old.remove();
+  const pill = PILLS[pi];
+  const svg = document.getElementById("canvas");
+  const r = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const sx = r.left + ((pill.x - vb.x) / vb.width) * r.width;
+  const sy = r.top + ((pill.y - vb.y) / vb.height) * r.height;
+  const wrap = document.getElementById("canvas-wrap");
+  const wr = wrap.getBoundingClientRect();
+
+  const input = document.createElement("input");
+  input.id = "inline-edit";
+  input.value = pill.text;
+  const iw = Math.max(180, pill.text.length * 7 + 20);
+  input.style.cssText = `position:absolute;z-index:25;left:${sx-wr.left-4}px;top:${sy-wr.top-4}px;
+    width:${iw}px;padding:5px 8px;border-radius:6px;border:1px solid #639922;
+    background:#13131c;color:#e0e0ea;font-family:'IBM Plex Mono',monospace;font-size:9px;
+    outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
+  function commit() { snapshot(); pill.text = input.value; input.remove(); render(); }
   input.addEventListener("keydown", e => { if(e.key==="Enter")commit(); if(e.key==="Escape"){input.remove();} e.stopPropagation(); });
   input.addEventListener("blur", commit);
   wrap.appendChild(input);
