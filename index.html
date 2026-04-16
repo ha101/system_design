@@ -7,9 +7,9 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
 :root {
-  --bg:#f0e6d3;--s1:#e8dcc8;--s2:#ddd0ba;
-  --b1:#c4b59a;--b2:#b0a08a;
-  --t1:#3a2e1e;--t2:#6b5d4a;--t3:#9a8a72;
+  --bg:#f8f6f2;--s1:#f0ede8;--s2:#e8e4de;
+  --b1:#d4cfc6;--b2:#c0b9ae;
+  --t1:#2a2420;--t2:#5a5248;--t3:#8a8278;
   --teal:#1a7a5a;--tl:#e0f0e8;--th:#0d5a3f;
   --purple:#6858b8;--pl:#ece8f5;--ph:#4a3a90;
   --coral:#c44422;--cl:#fce8e2;--ch:#a03018;
@@ -23,7 +23,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Outfit',sans-serif;height
 
 /* Header */
 header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
-  padding:6px 12px;border-bottom:1.5px solid #c4b59a;background:rgba(240,230,211,.85);flex-shrink:0;backdrop-filter:blur(12px);gap:8px}
+  padding:6px 12px;border-bottom:1px solid #d4cfc6;background:rgba(248,246,242,.9);flex-shrink:0;backdrop-filter:blur(12px);gap:8px}
 header h1{font-size:13px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;flex-shrink:0}
 header h1 span{color:var(--t3);font-weight:400}
 .hgroup{display:flex;gap:2px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
@@ -134,7 +134,7 @@ header h1 span{color:var(--t3);font-weight:400}
 /* Help bar */
 .help{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;
   font-family:'Caveat',cursive;font-size:13px;color:var(--t3);
-  padding:4px 14px;background:rgba(240,230,211,.7);border-radius:5px;
+  padding:4px 14px;background:rgba(248,246,242,.8);border-radius:5px;
   white-space:nowrap;user-select:none;transition:opacity .5s;opacity:.6}
 .help:hover{opacity:1}
 .help b{color:var(--t1);font-weight:600}
@@ -300,11 +300,11 @@ const LABELS = [
 ];
 
 const COLORS = {
-  coral: {fill:"#fdf0ec", stroke:"#c44422", title:"#a03018", auth:"#c44422"},
-  teal: {fill:"#e8f4ee", stroke:"#1a7a5a", title:"#0d5a3f", io:"#1a7a5a"},
-  purple: {fill:"#ece8f5", stroke:"#6858b8", title:"#4a3a90", io:"#6858b8"},
-  gray: {fill:"#ece8e0", stroke:"#9a8a72", title:"#6b5d4a"},
-  green: {fill:"#ecf4e0", stroke:"#4a7a18", title:"#3a6010"},
+  coral: {fill:"#fef4f1", stroke:"#c44422", title:"#a03018", auth:"#c44422"},
+  teal: {fill:"#eef7f2", stroke:"#1a7a5a", title:"#0d5a3f", io:"#1a7a5a"},
+  purple: {fill:"#f0edf8", stroke:"#6858b8", title:"#4a3a90", io:"#6858b8"},
+  gray: {fill:"#f0ede8", stroke:"#9a8a72", title:"#5a5248"},
+  green: {fill:"#f0f7e8", stroke:"#4a7a18", title:"#3a6010"},
 };
 
 // ============================================================
@@ -603,12 +603,12 @@ function render() {
   ).join("");
 
   let html = `<defs>${markerDefs}</defs>`;
-  html += `<rect width="${W}" height="${H}" fill="#f0e6d3"/>`;
+  html += `<rect width="${W}" height="${H}" fill="#f8f6f2"/>`;
 
   // Zone backgrounds
-  html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="106" width="${W}" height="100" fill="#c44422" opacity=".04"/>`;
-  html += `<rect class="zbg${layers.data?'':' off'}" id="z-data" x="0" y="390" width="${W}" height="60" fill="#6858b8" opacity=".04"/>`;
-  html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="555" width="${W}" height="70" fill="#4a7a18" opacity=".04"/>`;
+  html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="106" width="${W}" height="100" fill="#c44422" opacity=".03"/>`;
+  html += `<rect class="zbg${layers.data?'':' off'}" id="z-data" x="0" y="390" width="${W}" height="60" fill="#6858b8" opacity=".03"/>`;
+  html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="555" width="${W}" height="70" fill="#4a7a18" opacity=".03"/>`;
 
   // Row labels
   LABELS.forEach((lb, li) => {
@@ -637,7 +637,7 @@ function render() {
     if (cn.label) {
       const mx=fx+(tx-fx)/2, my=fy+(ty-fy)/2;
       const lw = cn.label.length*5.8+16;
-      g += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" rx="9" fill="#f0e6d3" stroke="${isSel?'#c44422':'#c4b59a'}" stroke-width="${isSel?1.5:.5}"/>`;
+      g += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" rx="9" fill="#f8f6f2" stroke="${isSel?'#c44422':'#c4b59a'}" stroke-width="${isSel?1.5:.5}"/>`;
       g += `<text x="${mx}" y="${my+4}" fill="#6b5d4a" font-size="9" text-anchor="middle" font-weight="600">${cn.label}</text>`;
     }
     g += `</g>`;
@@ -646,12 +646,12 @@ function render() {
 
   // Pills (deal states, exception states, annotations) — per layer
   const PILL_COLORS = {
-    teal:{fill:"#e0f0e8",stroke:"#1a7a5a",text:"#0d5a3f"},
-    coral:{fill:"#fce8e2",stroke:"#c44422",text:"#a03018"},
-    amber:{fill:"#f8f0d8",stroke:"#a06810",text:"#806010"},
-    green:{fill:"#ecf4e0",stroke:"#4a7a18",text:"#3a6010"},
-    purple:{fill:"#ece8f5",stroke:"#6858b8",text:"#4a3a90"},
-    gray:{fill:"#ece8e0",stroke:"#9a8a72",text:"#6b5d4a"},
+    teal:{fill:"#eef7f2",stroke:"#1a7a5a",text:"#0d5a3f"},
+    coral:{fill:"#fef4f1",stroke:"#c44422",text:"#a03018"},
+    amber:{fill:"#faf5e8",stroke:"#a06810",text:"#806010"},
+    green:{fill:"#f0f7e8",stroke:"#4a7a18",text:"#3a6010"},
+    purple:{fill:"#f0edf8",stroke:"#6858b8",text:"#4a3a90"},
+    gray:{fill:"#f0ede8",stroke:"#9a8a72",text:"#5a5248"},
   };
   PILLS.forEach((pill, pi) => {
     const pc = PILL_COLORS[pill.color] || PILL_COLORS.gray;
@@ -664,7 +664,7 @@ function render() {
     } else if (pill.wide) {
       // Wide annotation box
       const tw = pill.text.length*5+20;
-      g += `<rect x="${pill.x}" y="${pill.y}" width="${tw}" height="${pill.text.includes(':')?30:20}" rx="8" fill="#f0e6d3" stroke="${isSel?'#c44422':pc.stroke}" stroke-width="${isSel?1.5:.5}" opacity="${isSel?1:.6}"/>`;
+      g += `<rect x="${pill.x}" y="${pill.y}" width="${tw}" height="${pill.text.includes(':')?30:20}" rx="8" fill="#f8f6f2" stroke="${isSel?'#c44422':pc.stroke}" stroke-width="${isSel?1.5:.5}" opacity="${isSel?1:.6}"/>`;
       if (pill.text.includes(':')) {
         const [title,...rest] = pill.text.split(':');
         g += `<text x="${pill.x+10}" y="${pill.y+14}" fill="${pc.text}" font-size="10" font-weight="600">${esc(title.trim())}</text>`;
