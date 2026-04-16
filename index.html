@@ -272,6 +272,12 @@ const DEAL_STATES = [
   {label:"Funded", x:394}, {label:"Active", x:502}, {label:"Closed", x:700},
 ];
 
+const LABELS = [
+  {id:"lbl_humans", text:"HUMANS", x:30, y:28},
+  {id:"lbl_processing", text:"PROCESSING", x:30, y:244},
+  {id:"lbl_infra", text:"INFRASTRUCTURE", x:30, y:552},
+];
+
 const COLORS = {
   coral: {fill:"#2c1810", stroke:"#D85A30", title:"#F0997B", auth:"#D85A30"},
   teal: {fill:"#0e3028", stroke:"#1D9E75", title:"#5DCAA5", io:"#1D9E75"},
@@ -286,9 +292,10 @@ const COLORS = {
 const STORAGE_KEY = "orgarch_save";
 const DEFAULT_NODES = JSON.parse(JSON.stringify(NODES));
 const DEFAULT_CONNECTIONS = JSON.parse(JSON.stringify(CONNECTIONS));
+const DEFAULT_LABELS = JSON.parse(JSON.stringify(LABELS));
 
 function saveToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, v:1}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({nodes:NODES, connections:CONNECTIONS, labels:LABELS, v:2}));
   showToast("Draft saved to browser");
 }
 function loadFromStorage() {
@@ -299,6 +306,7 @@ function loadFromStorage() {
     if (d.nodes && d.connections) {
       NODES.length = 0; NODES.push(...d.nodes);
       CONNECTIONS.length = 0; CONNECTIONS.push(...d.connections);
+      if (d.labels) { LABELS.length = 0; LABELS.push(...d.labels); }
       return true;
     }
   } catch(e) {}
@@ -308,6 +316,7 @@ function resetToDefault() {
   if (!confirm("Reset to default layout? Your saved changes will be lost.")) return;
   NODES.length = 0; NODES.push(...JSON.parse(JSON.stringify(DEFAULT_NODES)));
   CONNECTIONS.length = 0; CONNECTIONS.push(...JSON.parse(JSON.stringify(DEFAULT_CONNECTIONS)));
+  LABELS.length = 0; LABELS.push(...JSON.parse(JSON.stringify(DEFAULT_LABELS)));
   localStorage.removeItem(STORAGE_KEY);
   selected = null; closePanel(); render();
   showToast("Reset to default");
@@ -453,17 +462,20 @@ async function publish() {
 }
 
 function replaceDataInHTML(html, nodes, conns) {
-  // Replace the NODES array
   const nodesStr = JSON.stringify(nodes, null, 2);
   html = html.replace(
     /const NODES = \[[\s\S]*?\n\];/,
     "const NODES = " + nodesStr + ";"
   );
-  // Replace the CONNECTIONS array
   const connsStr = JSON.stringify(conns, null, 2);
   html = html.replace(
     /const CONNECTIONS = \[[\s\S]*?\n\];/,
     "const CONNECTIONS = " + connsStr + ";"
+  );
+  const labelsStr = JSON.stringify(LABELS, null, 2);
+  html = html.replace(
+    /const LABELS = \[[\s\S]*?\n\];/,
+    "const LABELS = " + labelsStr + ";"
   );
   return html;
 }
@@ -481,24 +493,26 @@ const W = 1280, H = 760;
 // Undo
 const undoStack = [], redoStack = [];
 function snapshot() {
-  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
   redoStack.length = 0;
   if (undoStack.length > 50) undoStack.shift();
 }
 function undo() {
   if (!undoStack.length) return;
-  redoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  redoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
   const s = undoStack.pop();
   NODES.length = 0; NODES.push(...s.n);
   CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
+  if (s.l) { LABELS.length = 0; LABELS.push(...s.l); }
   selected = null; render();
 }
 function redo() {
   if (!redoStack.length) return;
-  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS))});
+  undoStack.push({n:JSON.parse(JSON.stringify(NODES)), c:JSON.parse(JSON.stringify(CONNECTIONS)), l:JSON.parse(JSON.stringify(LABELS))});
   const s = redoStack.pop();
   NODES.length = 0; NODES.push(...s.n);
   CONNECTIONS.length = 0; CONNECTIONS.push(...s.c);
+  if (s.l) { LABELS.length = 0; LABELS.push(...s.l); }
   selected = null; render();
 }
 
@@ -550,9 +564,14 @@ function render() {
   html += `<rect class="zbg${layers.cash?'':' off'}" id="z-cash" x="0" y="670" width="${W}" height="86" fill="#639922" opacity=".02"/>`;
 
   // Row labels
-  html += `<text x="30" y="28" fill="#50506e" font-size="9" letter-spacing=".1em">HUMANS</text>`;
-  html += `<text x="30" y="244" fill="#50506e" font-size="9" letter-spacing=".1em">PROCESSING</text>`;
-  html += `<text x="30" y="552" fill="#50506e" font-size="9" letter-spacing=".1em">INFRASTRUCTURE</text>`;
+  LABELS.forEach((lb, li) => {
+    const isSel = selected && selected.type==='label' && selected.index===li;
+    html += `<g data-label="${li}" class="label-g${isSel?' selected':''}">`;
+    // Invisible hit area for easier clicking/dragging
+    html += `<rect x="${lb.x-4}" y="${lb.y-12}" width="${lb.text.length*7+8}" height="16" fill="transparent" style="cursor:${editing?'grab':'default'}"/>`;
+    html += `<text x="${lb.x}" y="${lb.y}" fill="${isSel?'#639922':'#50506e'}" font-size="9" letter-spacing=".1em">${esc(lb.text)}</text>`;
+    html += `</g>`;
+  });
 
   // Connections per layer
   const layerHTML = {deal:"", esc:"", data:"", cash:""};
@@ -817,6 +836,7 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
   const svg = document.getElementById("canvas");
   const nodeG = e.target.closest("[data-node]");
   const connG = e.target.closest("[data-conn]");
+  const labelG = e.target.closest("[data-label]");
 
   closeCtx();
 
@@ -851,11 +871,19 @@ document.getElementById("canvas-wrap").addEventListener("mousedown", e => {
     selected = {type:'conn', index:parseInt(connG.dataset.conn)};
     render(); updatePanel();
     e.preventDefault();
+  } else if (editing && labelG) {
+    const li = parseInt(labelG.dataset.label);
+    selected = {type:'label', index:li};
+    const pt = svgPt(e);
+    dragging = {ni:li, startPt:pt, origX:LABELS[li].x, origY:LABELS[li].y, g:labelG, moved:false, isLabel:true};
+    render();
+    dragging.g = svg.querySelector(`[data-label="${li}"]`);
+    e.preventDefault();
   } else if (nodeG && !editing) {
     // Browse mode: select for info
     selected = {type:'node', index:parseInt(nodeG.dataset.node)};
     render(); updatePanel();
-  } else if (!nodeG && !connG) {
+  } else if (!nodeG && !connG && !labelG) {
     // Pan or deselect
     if (e.button === 0 && !e.target.closest("#panel")) {
       if (selected) { selected = null; closePanel(); render(); }
@@ -897,8 +925,13 @@ document.addEventListener("mouseup", e => {
       const pt = svgPt(e);
       const dx = pt.x - dragging.startPt.x;
       const dy = pt.y - dragging.startPt.y;
-      NODES[dragging.ni].x = Math.round(dragging.origX + dx);
-      NODES[dragging.ni].y = Math.round(dragging.origY + dy);
+      if (dragging.isLabel) {
+        LABELS[dragging.ni].x = Math.round(dragging.origX + dx);
+        LABELS[dragging.ni].y = Math.round(dragging.origY + dy);
+      } else {
+        NODES[dragging.ni].x = Math.round(dragging.origX + dx);
+        NODES[dragging.ni].y = Math.round(dragging.origY + dy);
+      }
       render();
     }
     dragging = null;
@@ -915,6 +948,7 @@ document.getElementById("canvas-wrap").addEventListener("dblclick", e => {
   if (!editing) { toggleEdit(); return; }
   const nodeG = e.target.closest("[data-node]");
   const connG = e.target.closest("[data-conn]");
+  const labelG = e.target.closest("[data-label]");
   if (nodeG) {
     const ni = parseInt(nodeG.dataset.node);
     selected = {type:'node', index:ni};
@@ -923,11 +957,15 @@ document.getElementById("canvas-wrap").addEventListener("dblclick", e => {
     const ci = parseInt(connG.dataset.conn);
     selected = {type:'conn', index:ci};
     render();
-    // Inline label edit
     const cn = CONNECTIONS[ci];
     const {fx,fy,tx,ty} = connPts(cn.from, cn.to);
     const mx = fx+(tx-fx)/2, my = fy+(ty-fy)/2;
     inlineEdit(ci, mx, my);
+  } else if (labelG) {
+    const li = parseInt(labelG.dataset.label);
+    selected = {type:'label', index:li};
+    render();
+    inlineLabelTextEdit(li);
   }
 });
 
@@ -968,6 +1006,32 @@ function inlineEdit(ci, svgX, svgY) {
     background:#13131c;color:#e0e0ea;font-family:'IBM Plex Mono',monospace;font-size:11px;
     text-align:center;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
   function commit() { snapshot(); cn.label = input.value||undefined; input.remove(); render(); }
+  input.addEventListener("keydown", e => { if(e.key==="Enter")commit(); if(e.key==="Escape"){input.remove();} e.stopPropagation(); });
+  input.addEventListener("blur", commit);
+  wrap.appendChild(input);
+  input.focus(); input.select();
+}
+
+function inlineLabelTextEdit(li) {
+  const old = document.getElementById("inline-edit");
+  if (old) old.remove();
+  const lb = LABELS[li];
+  const svg = document.getElementById("canvas");
+  const r = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const sx = r.left + ((lb.x - vb.x) / vb.width) * r.width;
+  const sy = r.top + ((lb.y - vb.y) / vb.height) * r.height;
+  const wrap = document.getElementById("canvas-wrap");
+  const wr = wrap.getBoundingClientRect();
+
+  const input = document.createElement("input");
+  input.id = "inline-edit";
+  input.value = lb.text;
+  input.style.cssText = `position:absolute;z-index:25;left:${sx-wr.left-4}px;top:${sy-wr.top-14}px;
+    width:180px;padding:5px 8px;border-radius:6px;border:1px solid #639922;
+    background:#13131c;color:#e0e0ea;font-family:'IBM Plex Mono',monospace;font-size:9px;
+    letter-spacing:.1em;text-transform:uppercase;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.5)`;
+  function commit() { snapshot(); lb.text = input.value; input.remove(); render(); }
   input.addEventListener("keydown", e => { if(e.key==="Enter")commit(); if(e.key==="Escape"){input.remove();} e.stopPropagation(); });
   input.addEventListener("blur", commit);
   wrap.appendChild(input);
