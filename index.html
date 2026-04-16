@@ -142,6 +142,27 @@ header h1 span{color:var(--t3);font-weight:400}
   background:var(--gnl);border:1px solid var(--green);border-radius:6px;
   opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* GitHub login modal */
+#gh-modal{position:fixed;z-index:50;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center}
+#gh-modal.visible{display:flex}
+#gh-modal-box{width:380px;background:var(--s1);border:1px solid var(--b2);border-radius:12px;
+  padding:24px;box-shadow:0 16px 48px rgba(0,0,0,.6);font-family:'IBM Plex Mono',monospace}
+#gh-modal-box h2{font-size:14px;font-weight:500;margin-bottom:4px;color:var(--t1)}
+#gh-modal-box p{font-size:10px;color:var(--t3);line-height:1.5;margin-bottom:12px}
+#gh-modal-box a{color:var(--th)}
+#gh-modal-box input{width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--b1);
+  background:var(--s2);color:var(--t1);font-family:inherit;font-size:11px;outline:none;margin-bottom:10px}
+#gh-modal-box input:focus{border-color:var(--green)}
+.gh-btns{display:flex;gap:8px;justify-content:flex-end}
+.gh-btns button{font-family:inherit;font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--b1);background:0;color:var(--t2)}
+.gh-btns button.primary{border-color:var(--green);color:var(--gnh)}
+.gh-btns button.primary:hover{background:var(--green);color:#fff}
+.gh-btns button.danger{border-color:var(--coral);color:var(--ch)}
+#gh-user{font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px;cursor:pointer}
+#gh-user:hover{color:var(--t2)}
+#gh-user .avatar{width:16px;height:16px;border-radius:50%;border:1px solid var(--b1)}
 </style>
 </head>
 <body>
@@ -174,7 +195,12 @@ header h1 span{color:var(--t3);font-weight:400}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       Save
     </button>
+    <button class="hbtn primary" id="btn-publish" onclick="publish()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+      Publish
+    </button>
     <div class="sep" id="cmd-sep" style="display:none"></div>
+    <span id="gh-user" onclick="ghUserClick()" style="display:none"></span>
     <button class="hbtn" onclick="openCmd()" title="⌘K">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
@@ -193,6 +219,13 @@ header h1 span{color:var(--t3);font-weight:400}
   <div id="cmd-box">
     <input id="cmd-input" placeholder="Type a command..." autocomplete="off">
     <div id="cmd-results"></div>
+  </div>
+</div>
+
+<div id="gh-modal">
+  <div id="gh-modal-box">
+    <h2 id="gh-modal-title">Connect to GitHub</h2>
+    <div id="gh-modal-body"></div>
   </div>
 </div>
 
@@ -286,6 +319,153 @@ function showToast(msg) {
   t.className = "toast show";
   clearTimeout(t._tid);
   t._tid = setTimeout(() => t.className = "toast", 1800);
+}
+
+// ============================================================
+// GITHUB INTEGRATION
+// ============================================================
+const GH_REPO = "ha101/system_design";
+const GH_FILE = "index.html";
+const GH_TOKEN_KEY = "orgarch_gh_token";
+const GH_USER_KEY = "orgarch_gh_user";
+
+function getGHToken() { return localStorage.getItem(GH_TOKEN_KEY); }
+function getGHUser() { try { return JSON.parse(localStorage.getItem(GH_USER_KEY)); } catch(e) { return null; } }
+
+function initGHUser() {
+  const user = getGHUser();
+  const el = document.getElementById("gh-user");
+  if (user) {
+    el.innerHTML = `<img class="avatar" src="${user.avatar}" alt="">${user.login}`;
+    el.style.display = "flex";
+  } else {
+    el.style.display = "none";
+  }
+}
+
+function ghUserClick() {
+  const user = getGHUser();
+  if (!user) { showGHLogin(); return; }
+  const modal = document.getElementById("gh-modal");
+  const body = document.getElementById("gh-modal-body");
+  document.getElementById("gh-modal-title").textContent = "GitHub";
+  body.innerHTML = `
+    <p>Connected as <strong style="color:var(--t1)">${user.login}</strong></p>
+    <div class="gh-btns">
+      <button class="danger" onclick="ghLogout()">Disconnect</button>
+      <button onclick="closeGHModal()">Close</button>
+    </div>`;
+  modal.classList.add("visible");
+}
+
+function showGHLogin() {
+  const modal = document.getElementById("gh-modal");
+  const body = document.getElementById("gh-modal-body");
+  document.getElementById("gh-modal-title").textContent = "Connect to GitHub";
+  body.innerHTML = `
+    <p>Enter a <a href="https://github.com/settings/tokens?type=beta" target="_blank">fine-grained personal access token</a> with <strong style="color:var(--t1)">Contents: Read and write</strong> permission for the <strong style="color:var(--t1)">${GH_REPO}</strong> repo.</p>
+    <input id="gh-token-input" type="password" placeholder="github_pat_..." autocomplete="off">
+    <div id="gh-login-err" style="color:var(--ch);font-size:10px;margin-bottom:8px;display:none"></div>
+    <div class="gh-btns">
+      <button onclick="closeGHModal()">Cancel</button>
+      <button class="primary" onclick="ghConnect()">Connect</button>
+    </div>`;
+  modal.classList.add("visible");
+  setTimeout(() => document.getElementById("gh-token-input").focus(), 50);
+}
+
+function closeGHModal() { document.getElementById("gh-modal").classList.remove("visible"); }
+
+async function ghConnect() {
+  const input = document.getElementById("gh-token-input");
+  const err = document.getElementById("gh-login-err");
+  const token = input.value.trim();
+  if (!token) { err.textContent = "Token required"; err.style.display = "block"; return; }
+  err.style.display = "none";
+  try {
+    const res = await fetch("https://api.github.com/user", {headers:{"Authorization":"Bearer "+token}});
+    if (!res.ok) throw new Error("Invalid token");
+    const user = await res.json();
+    // Verify repo access
+    const repoRes = await fetch(`https://api.github.com/repos/${GH_REPO}`, {headers:{"Authorization":"Bearer "+token}});
+    if (!repoRes.ok) throw new Error("No access to " + GH_REPO);
+    localStorage.setItem(GH_TOKEN_KEY, token);
+    localStorage.setItem(GH_USER_KEY, JSON.stringify({login:user.login, avatar:user.avatar_url}));
+    closeGHModal();
+    initGHUser();
+    showToast("Connected as " + user.login);
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = "block";
+  }
+}
+
+function ghLogout() {
+  localStorage.removeItem(GH_TOKEN_KEY);
+  localStorage.removeItem(GH_USER_KEY);
+  closeGHModal();
+  initGHUser();
+  showToast("Disconnected");
+}
+
+async function publish() {
+  const token = getGHToken();
+  if (!token) { showGHLogin(); return; }
+
+  showToast("Publishing...");
+  try {
+    // Get current file content + SHA
+    const fileRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers:{"Authorization":"Bearer "+token}
+    });
+    if (!fileRes.ok) throw new Error("Failed to read repo");
+    const fileData = await fileRes.json();
+    const currentContent = atob(fileData.content.replace(/\n/g, ""));
+
+    // Replace NODES and CONNECTIONS arrays in the file
+    const newContent = replaceDataInHTML(currentContent, NODES, CONNECTIONS);
+
+    // Commit
+    const commitRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      method: "PUT",
+      headers: {"Authorization":"Bearer "+token, "Content-Type":"application/json"},
+      body: JSON.stringify({
+        message: "Update org architecture layout",
+        content: btoa(unescape(encodeURIComponent(newContent))),
+        sha: fileData.sha
+      })
+    });
+    if (!commitRes.ok) {
+      const errData = await commitRes.json();
+      throw new Error(errData.message || "Commit failed");
+    }
+    showToast("Published — site will update in ~1 min");
+  } catch(e) {
+    if (e.message.includes("Bad credentials")) {
+      localStorage.removeItem(GH_TOKEN_KEY);
+      localStorage.removeItem(GH_USER_KEY);
+      initGHUser();
+      showGHLogin();
+      return;
+    }
+    showToast("Error: " + e.message);
+  }
+}
+
+function replaceDataInHTML(html, nodes, conns) {
+  // Replace the NODES array
+  const nodesStr = JSON.stringify(nodes, null, 2);
+  html = html.replace(
+    /const NODES = \[[\s\S]*?\n\];/,
+    "const NODES = " + nodesStr + ";"
+  );
+  // Replace the CONNECTIONS array
+  const connsStr = JSON.stringify(conns, null, 2);
+  html = html.replace(
+    /const CONNECTIONS = \[[\s\S]*?\n\];/,
+    "const CONNECTIONS = " + connsStr + ";"
+  );
+  return html;
 }
 
 // ============================================================
@@ -504,6 +684,7 @@ function toggleEdit() {
   document.getElementById("btn-redo").style.display = show;
   document.getElementById("save-sep").style.display = show;
   document.getElementById("btn-save").style.display = show;
+  document.getElementById("btn-publish").style.display = show;
   document.getElementById("cmd-sep").style.display = show;
   if (!editing) {
     selected = null;
@@ -907,6 +1088,8 @@ const COMMANDS = [
   {name:"Undo", key:"⌘Z", fn:undo},
   {name:"Redo", key:"⌘⇧Z", fn:redo},
   {name:"Save changes", key:"⌘S", fn:saveToStorage},
+  {name:"Publish to GitHub", key:"⌘⇧S", fn:publish},
+  {name:"Connect to GitHub", key:"", fn:showGHLogin},
   {name:"Reset to default", key:"", fn:resetToDefault},
 ];
 
@@ -957,7 +1140,8 @@ document.addEventListener("keydown", e => {
   if (document.getElementById("cmd-palette").classList.contains("visible")) return;
   if (e.target.closest("input,textarea,select")) return;
 
-  // Cmd+S
+  // Cmd+Shift+S = publish, Cmd+S = save local
+  if ((e.metaKey||e.ctrlKey) && e.key==="s" && e.shiftKey) { e.preventDefault(); publish(); return; }
   if ((e.metaKey||e.ctrlKey) && e.key==="s") { e.preventDefault(); saveToStorage(); return; }
   // Cmd+K
   if ((e.metaKey||e.ctrlKey) && e.key==="k") { e.preventDefault(); openCmd(); return; }
@@ -988,6 +1172,7 @@ document.addEventListener("keydown", e => {
 // ============================================================
 loadFromStorage();
 render();
+initGHUser();
 </script>
 </body>
 </html>
