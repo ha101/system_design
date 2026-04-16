@@ -80,9 +80,9 @@ svg text{font-family:'IBM Plex Mono',monospace}
       <button class="tog" id="t-cash" onclick="tog('cash')"><span class="d" style="background:var(--green)"></span>Cashflow<span class="k">4</span></button>
     </div>
     <div class="sep"></div>
-    <button class="edit-btn" id="edit-btn" onclick="enterEdit()">
+    <button class="edit-btn" id="edit-btn" onclick="downloadExcalidraw()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Edit layout
+      Download .excalidraw
     </button>
   </div>
 </header>
@@ -91,13 +91,6 @@ svg text{font-family:'IBM Plex Mono',monospace}
 <!-- SVG is identical to previous version - generated from data on load -->
 </div>
 
-<div id="edit-mode">
-  <div class="loading-msg" id="loading-msg">
-    <div class="spinner"></div>
-    Loading Excalidraw editor...
-  </div>
-  <div id="excalidraw-container"></div>
-</div>
 
 <div class="help" id="help-bar"><b>1</b> deal &nbsp; <b>2</b> escalation &nbsp; <b>3</b> data &nbsp; <b>4</b> cashflow &nbsp; <b>A</b> all &nbsp; <b>0</b> nodes only &nbsp; <b>E</b> edit</div>
 
@@ -502,7 +495,7 @@ document.addEventListener("keydown", e => {
   if (e.key==="4"){st.cash=!st.cash;sync()}
   if (e.key.toLowerCase()==="a"){st.deal=st.esc=st.data=st.cash=true;sync()}
   if (e.key==="0"){st.deal=st.esc=st.data=st.cash=false;sync()}
-  if (e.key.toLowerCase()==="e") enterEdit();
+  if (e.key.toLowerCase()==="e") downloadExcalidraw();
 });
 
 // ============================================================
