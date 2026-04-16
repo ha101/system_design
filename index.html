@@ -609,7 +609,7 @@ function render() {
   ).join("");
 
   let html = `<defs>${markerDefs}</defs>`;
-  html += `<rect width="${W}" height="${H}" fill="#f8f6f2"/>`;
+  html += `<rect width="${W}" height="${H}" fill="none"/>`;
 
   // Zone backgrounds
   html += `<rect class="zbg${layers.esc?'':' off'}" id="z-esc" x="0" y="106" width="${W}" height="100" fill="#c44422" opacity=".03"/>`;
